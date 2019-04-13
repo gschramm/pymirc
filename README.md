@@ -12,8 +12,9 @@ the medical imaging research center of KU Leuven.
 
 ## Dependencies
 
-* python 3
-* numpy v.??
-* scipy v.??
-* numba v.??
-* pydicm v.??
+* python3
+* numpy  v.??
+* scipy  v.??
+* numba  v.??
+* pydicm v.?? (only fileio)
+* pylab  v.?? (only viewer)
