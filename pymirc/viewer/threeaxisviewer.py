@@ -13,6 +13,7 @@ class ThreeAxisViewer:
                      sl_y          = None, 
                      sl_z          = None, 
                      sl_t          = 0, 
+                     ls            = ':',
                      imshow_kwargs = {}):
 
     if not isinstance(vols,list): 
@@ -102,12 +103,16 @@ class ThreeAxisViewer:
       self.ax[i,1].set_axis_off()    
       self.ax[i,2].set_axis_off()
     
+    self.ax[0,0].set_title(str(self.sl_z),fontsize='small') 
+    self.ax[0,1].set_title(str(self.sl_y),fontsize='small') 
+    self.ax[0,2].set_title(str(self.sl_x),fontsize='small') 
+
     # connect the image figure with actions
     self.fig.canvas.mpl_connect('scroll_event',self.onscroll)
     self.fig.canvas.mpl_connect('button_press_event',self.onbuttonpress)
     self.fig.canvas.mpl_connect('key_press_event', self.onkeypress)
 
-    self.fig.subplots_adjust(left=0,right=1,bottom=0,top=1,wspace=0.01,hspace=0.01)
+    self.fig.subplots_adjust(left=0,right=1,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
     self.fig.show()
 
     # set up figure for colorbar and ...
@@ -127,7 +132,29 @@ class ThreeAxisViewer:
       self.ax_cb[i,0].get_yaxis().set_ticklabels(['%.1e' % self.imshow_kwargs[i]['vmin'],
                                                 '%.1e' % self.imshow_kwargs[i]['vmax']])
       self.ax_cb[i,0].yaxis.tick_right()
-     
+
+
+    # add cross hair
+    self.l0x = [] 
+    self.l0y = []
+    self.l1x = []
+    self.l1y = []
+    self.l2x = []
+    self.l2y = []
+   
+    self.showCross = True
+    if ls == '': self.showCross = False
+
+    if self.showCross:
+      for i in range(self.n_vols):
+        self.l0x.append(self.axes[3*i + 0].axvline(self.sl_x, color = 'r',ls = ls)) 
+        self.l0y.append(self.axes[3*i + 0].axhline(self.sl_y, color = 'r',ls = ls))
+
+        self.l1x.append(self.axes[3*i + 1].axvline(self.sl_x, color = 'r',ls = ls))
+        self.l1y.append(self.axes[3*i + 1].axhline(self.shape[self.iz] - self.sl_z, color = 'r',ls = ls))
+
+        self.l2x.append(self.axes[3*i + 2].axvline(self.sl_y, color = 'r',ls = ls))
+        self.l2y.append(self.axes[3*i + 2].axhline(self.shape[self.iz] - self.sl_z, color = 'r',ls = ls))
 
     # set up figure for sliders
     self.fig_sl, self.ax_sl = py.subplots(2*self.n_vols, 1, figsize = (4,3), squeeze = False)
@@ -174,18 +201,30 @@ class ThreeAxisViewer:
   def redraw_transversal(self):
     for i in range(self.n_vols):
       self.imgs[i][0].set_data(np.squeeze(self.vols[i][tuple(self.sl0)].T))
+    self.ax[0,0].set_title(str(self.sl_z),fontsize='small') 
+    if self.showCross:
+        for l in self.l0x: l.set_xdata(self.sl_x) 
+        for l in self.l0y: l.set_ydata(self.sl_y) 
     py.draw()
 
   #------------------------------------------------------------------------
   def redraw_coronal(self):
     for i in range(self.n_vols):
       self.imgs[i][1].set_data(np.squeeze(np.flip(self.vols[i][tuple(self.sl1)].T,0)))
+    self.ax[0,1].set_title(str(self.sl_y),fontsize='small') 
+    if self.showCross:
+        for l in self.l1x: l.set_xdata(self.sl_x) 
+        for l in self.l1y: l.set_ydata(self.shape[self.iz] - self.sl_z - 1) 
     py.draw()
 
   #------------------------------------------------------------------------
   def redraw_sagittal(self):
     for i in range(self.n_vols):
       self.imgs[i][2].set_data(np.squeeze(np.flip(self.vols[i][tuple(self.sl2)].T,0)))
+    self.ax[0,2].set_title(str(self.sl_x),fontsize='small') 
+    if self.showCross:
+        for l in self.l2x: l.set_xdata(self.sl_y) 
+        for l in self.l2y: l.set_ydata(self.shape[self.iz] - self.sl_z - 1) 
     py.draw()
 
   #------------------------------------------------------------------------
@@ -254,7 +293,7 @@ class ThreeAxisViewer:
                 self.sl_z = (self.sl_z - 1) % self.shape[self.iz]
 
             self.recalculate_slices()
-            self.redraw_transversal()
+            self.redraw()
 
           elif (iax %3 == 1):
             if event.key == 'up':
@@ -263,7 +302,7 @@ class ThreeAxisViewer:
                 self.sl_y = (self.sl_y - 1) % self.shape[self.iy]
 
             self.recalculate_slices()
-            self.redraw_coronal()
+            self.redraw()
 
           elif (iax %3 == 2):
             if event.key == 'up':
@@ -272,7 +311,7 @@ class ThreeAxisViewer:
                 self.sl_x = (self.sl_x - 1) % self.shape[self.ix]
 
             self.recalculate_slices()
-            self.redraw_sagittal()
+            self.redraw()
 
   #------------------------------------------------------------------------
   def onbuttonpress(self,event):
@@ -284,20 +323,17 @@ class ThreeAxisViewer:
             self.sl_x = int(event.xdata) % self.shape[self.ix]
             self.sl_y = int(event.ydata) % self.shape[self.iy]
             self.recalculate_slices()
-            self.redraw_coronal()
-            self.redraw_sagittal()
+            self.redraw()
           elif iax % 3 == 1:
             self.sl_x = int(event.xdata) % self.shape[self.ix]
             self.sl_z = (self.shape[self.iz] - int(event.ydata)) % self.shape[self.iz]
             self.recalculate_slices()
-            self.redraw_transversal()
-            self.redraw_sagittal()
+            self.redraw()
           elif iax % 3 == 2:
             self.sl_y = int(event.xdata) % self.shape[self.iy]
             self.sl_z = (self.shape[self.iz] - int(event.ydata)) % self.shape[self.iz]
             self.recalculate_slices()
-            self.redraw_transversal()
-            self.redraw_coronal()
+            self.redraw()
 
   #------------------------------------------------------------------------
   def onscroll(self,event):
@@ -311,7 +347,7 @@ class ThreeAxisViewer:
             self.sl_z = (self.sl_z - 1) % self.shape[self.iz]
 
         self.recalculate_slices()
-        self.redraw_transversal()
+        self.redraw()
 
       elif (iax %3 == 1):
         if event.button == 'up':
@@ -320,7 +356,7 @@ class ThreeAxisViewer:
             self.sl_y = (self.sl_y - 1) % self.shape[self.iy]
 
         self.recalculate_slices()
-        self.redraw_coronal()
+        self.redraw()
 
       elif (iax %3 == 2):
         if event.button == 'up':
@@ -329,4 +365,4 @@ class ThreeAxisViewer:
             self.sl_x = (self.sl_x - 1) % self.shape[self.ix]
 
         self.recalculate_slices()
-        self.redraw_sagittal()
+        self.redraw()
