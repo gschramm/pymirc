@@ -104,6 +104,7 @@ class ThreeAxisViewer:
     
     # connect the image figure with actions
     self.fig.canvas.mpl_connect('scroll_event',self.onscroll)
+    self.fig.canvas.mpl_connect('button_press_event',self.onbuttonpress)
     self.fig.canvas.mpl_connect('key_press_event', self.onkeypress)
 
     self.fig.subplots_adjust(left=0,right=1,bottom=0,top=1,wspace=0.01,hspace=0.01)
@@ -233,12 +234,12 @@ class ThreeAxisViewer:
   #------------------------------------------------------------------------
   def onkeypress(self,event):
     if ((event.key == 'left' or event.key == 'right' or event.key == 'up' or event.key == 'down') and 
-        (self.ndim == 4)):
-      if event.key == 'left':    
+        (self.ndim >= 3)):
+      if event.key == 'left' and self.ndim == 4:    
         self.sl_t = (self.sl_t - 1) % self.nframes 
         self.recalculate_slices()
         self.redraw()
-      elif event.key == 'right': 
+      elif event.key == 'right' and self.ndim == 4: 
         self.sl_t = (self.sl_t + 1) % self.nframes 
         self.recalculate_slices()
         self.redraw()
@@ -273,6 +274,30 @@ class ThreeAxisViewer:
             self.recalculate_slices()
             self.redraw_sagittal()
 
+  #------------------------------------------------------------------------
+  def onbuttonpress(self,event):
+    if py.get_current_fig_manager().toolbar.mode == '':
+      if event.inaxes in self.axes:
+        iax =  self.axes.index(event.inaxes)
+        if iax < 3*self.n_vols:
+          if iax % 3 == 0:
+            self.sl_x = int(event.xdata) % self.shape[self.ix]
+            self.sl_y = int(event.ydata) % self.shape[self.iy]
+            self.recalculate_slices()
+            self.redraw_coronal()
+            self.redraw_sagittal()
+          elif iax % 3 == 1:
+            self.sl_x = int(event.xdata) % self.shape[self.ix]
+            self.sl_z = (self.shape[self.iz] - int(event.ydata)) % self.shape[self.iz]
+            self.recalculate_slices()
+            self.redraw_transversal()
+            self.redraw_sagittal()
+          elif iax % 3 == 2:
+            self.sl_y = int(event.xdata) % self.shape[self.iy]
+            self.sl_z = (self.shape[self.iz] - int(event.ydata)) % self.shape[self.iz]
+            self.recalculate_slices()
+            self.redraw_transversal()
+            self.redraw_coronal()
 
   #------------------------------------------------------------------------
   def onscroll(self,event):
