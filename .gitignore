@@ -1,3 +1,7 @@
+# files / folders to be ignored (manual)
+data/*
+
+#--- auto generated python ignores ----
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

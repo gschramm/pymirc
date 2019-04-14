@@ -5,19 +5,33 @@ import pylab as py
 pymirc_path = os.path.join('..','..')
 if not pymirc_path in sys.path: sys.path.append(pymirc_path)
 
-import pymirc.viewer as pymv
+import pymirc.viewer           as pymv
+import pymirc.fileio           as pymf
+import pymirc.image_operations as pymi
 
 #---------------------------------------------------------------------------------------------
 
-np.random.seed(42)
-# generate 2 random 4D data sets
-# the viewer expects the axis to be (time, patient left right, patient anterior posterior, patient feet head)
-# in LPS orientation (dicom standard orientation)
-# waring: the default nifti orientation is RAS
-vols = [np.random.rand(3,100,100,50),np.random.rand(3,100,100,50)]
-voxsize = [1.,1.,2.]
-imshow_kwargs = [{'cmap':py.cm.Greys_r,'vmin':0,'vmax':1},{'cmap':py.cm.jet,'vmin':0,'vmax':1.2}]
+data_dir = os.path.join('..','..','data','nema_petct')
 
-vi = pymv.ThreeAxisViewer(vols, voxsize = voxsize, imshow_kwargs = imshow_kwargs)
+if not os.path.exists(data_dir):
+  url = 'https://kuleuven.box.com/s/wub9pk0yvt8kjqyj7p0bz11boca4334x/nema_petct.zip'
+  print('please first download example PET/CT data from:')
+  print(url)
+  print('and unzip into: ', data_dir)
 
-if not pymirc_path in sys.path: sys.path.append(pymirc_path)
+# read PET/CT nema phantom dicom data sets from
+pet_dcm = pymf.DicomVolume(os.path.join(data_dir,'PT','*.dcm'))
+pet_vol = pet_dcm.get_data()
+
+ct_dcm  = pymf.DicomVolume(os.path.join(data_dir,'CT','*.dcm'))
+ct_vol  = ct_dcm.get_data()
+
+# the PET and CT images are on different voxel grids
+# to view them in parallel, we interpolate the PET volume to the CT grid
+pet_vol_ct_grid = pymi.aff_transform(pet_vol, np.linalg.inv(pet_dcm.affine) @ ct_dcm.affine, 
+                                     output_shape = ct_vol.shape)
+
+imshow_kwargs = [{'cmap':py.cm.Greys},{'cmap':py.cm.Greys_r,'vmin':-1024,'vmax':500}]
+
+vi = pymv.ThreeAxisViewer([pet_vol_ct_grid,ct_vol], voxsize = ct_dcm.voxsize, 
+                          imshow_kwargs = imshow_kwargs)
