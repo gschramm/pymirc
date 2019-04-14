@@ -5,7 +5,35 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from matplotlib.widgets      import Slider, TextBox
 
 class ThreeAxisViewer:
+  """ simplistic three axis viewer for multiple aligned 3d or 4d arrays
 
+  Parameters
+  ----------
+  vols : list
+    a list of 3d or 4d numpy arrays containing the image volumes
+  vxosize: list, optional
+    a 3 element with the voxel size
+  width: float, optional
+    width of the figure
+  sl_x, sl_y, sl_z, sl_t: int, optional
+    slices to show at beginning
+  ls : string, optional
+     str specifying the line style of the cross hair (use '' for no cross hair)
+  imshow_kwargs : list of dictionaries
+     list of dictionaries with keyword arguments passed to pylab.imshow()
+
+  Note
+  ----
+  Scrolling with the mouse or the up and down keys can be used to scroll thorugh the slices.
+  The left and right keys scroll through time frames.
+  The viewer expects the input volumes to be in LPS orientation.
+  If the input is 4D, the time axis should be the left most axis.
+
+  Example
+  -------
+  ims_kwargs = [{'vmin':-1,'vmax':1},{'vmin':-2,'vmax':2,'cmap':py.cm.jet}]
+  vi = ThreeAxisViewer([np.random.randn(90,90,80),np.random.randn(90,90,80)], imshow_kwargs = ims_kwargs)
+  """
   def __init__(self, vols, 
                      voxsize       = [1.,1.,1.], 
                      width         = None, 
