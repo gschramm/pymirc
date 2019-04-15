@@ -3,6 +3,8 @@ import math
 
 from numba import njit, prange
 
+from pymirc.image_operations import aff_transform, kul_aff
+
 #-------------------------------------------------------------------------------
 @njit(parallel = True)
 def jointhisto_3dvols(x, y, nbins = 40, normalize = True):
