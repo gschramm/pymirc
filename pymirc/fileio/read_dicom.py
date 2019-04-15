@@ -9,7 +9,27 @@ import pydicom as dicom
 #--------------------------------------------------------------
 
 class DicomVolume:
-    
+  """get 3D or 4D numpy arrays from a list of 2D dicom files
+
+  Parameters
+  ----------
+  filelist : list or str
+    either:
+    (1) a list of 2d dicom files containing the image data of a 3D/4D dicom series
+    (2) a string containing a pattern passed to glob.glob to generate the file list in (1)
+
+  Note
+  ----
+  The aim of this class is to get 3D/4D numpy arrays from a set of 2D dicom files of a dicom series
+  in defined orientation (LPS).  
+
+  Example
+  -------
+  dcm_vol = DicomVolume('mydicom_dir/*.dcm')
+  img_arr = dcm_vol.get_data()
+  img_aff = dcm_vol.affine
+  dcm_hdr = dcm_vol.firstdcmheader
+  """
   def __init__(self,filelist):
     
     if   isinstance(filelist,list): self.filelist = filelist
@@ -64,6 +84,19 @@ class DicomVolume:
 
   #------------------------------------------------------------------------------------------------------
   def reorient_volume(self, patvol):
+  """reorient the raw dicom volume to LPS orientation
+
+  Parameters
+  ----------
+  patvol : 3d numpy array
+
+
+  Returns
+  -------
+  3d numpy array
+     reoriented numpy array in LPS orientation
+
+  """
     # check the directions of the norm, col and row dir and revert some axis if necessary
     if(self.normdir == -1):
         patvol = patvol[::-1,:,:]
@@ -126,6 +159,19 @@ class DicomVolume:
 
   #------------------------------------------------------------------------------------------------------
   def get_data(self, frames = None):
+  """get the actual 3D or 4D image data 
+
+  Parameters
+  ----------
+  frames : list of ints, optional
+    if the data is 4D this can be a list of frame number to be read
+    the default None means read all frames
+
+  Returns
+  -------
+  a 3D or 4D numpy array
+    array containing the data
+  """
     if not self.read_all_dcms:
       print('Analyzing dicom headers')
       self.dicomlist     = [dicom.read_file(x) for x in self.filelist] 
@@ -292,18 +338,26 @@ class DicomVolume:
 
   #--------------------------------------------------------------------------
   def get_3d_overlay_img(self, tag = 0x6002):
-    """
-    Read dicom overlay information and convert it to a binary image.
-    
-    Note
-    ----
-    (1) up to 8 overlays can be saved in the tags 0x6000, 0x6002, 0x6004, 0x6006, 0x6008, 0x600a, 0x600c, 0x600e
+  """ Read dicom overlay information and convert it to a binary image.
+  
+  Parameters
+  ----------
+  tag : int in hex, optional
+    overlay tag to use, default 0x6002 
 
-    (2) the generation of the binary label image was only tested for transaxial CT overlays so far
+  Note
+  ----
+  (1) up to 8 overlays can be saved in the tags 0x6000, 0x6002, 0x6004, 0x6006, 0x6008, 0x600a, 0x600c, 0x600e
 
-    (3) so far it only works for negative origins
-    """
+  (2) the generation of the binary label image was only tested for transaxial CT overlays so far
 
+  (3) so far it only works for negative origins
+
+  Returns
+  -------
+  3d numpy array
+    a binary array containing the overlay information
+  """
     # up to know we assume that the input dicom list is a 3D volume
     # so we use all dicom files as input for the overlay
 
