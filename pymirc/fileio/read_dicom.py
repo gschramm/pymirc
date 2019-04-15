@@ -180,25 +180,30 @@ class DicomVolume:
       self.dicomlist     = [dicom.read_file(x) for x in self.filelist] 
       self.read_all_dcms = True
 
-      self.acq_datetimes = []
+      self.TemporalPositionIdentifiers = []
 
+      # to figure out which 2d dicom file belongs to which time frame
+      # we use the TemporalPositionIdentifier (not very common) or the acquisition date time
       for dcm in self.dicomlist:
-        if 'AcquisitionDate' in dcm:
-          acq_d = dcm.AcquisitionDate
+        if 'TemporalPositionIdentifier' in dcm:
+          self.TemporalPositionIdentifiers.append(dcm.TemporalPositionIdentifier)
         else:
-          acq_d = '19700101'
+          if 'AcquisitionDate' in dcm:
+            acq_d = dcm.AcquisitionDate
+          else:
+            acq_d = '19700101'
 
-        if 'AcquisitionTime' in dcm:
-          acq_t = dcm.AcquisitionTime
-        else:
-          acq_t = '000000'
+          if 'AcquisitionTime' in dcm:
+            acq_t = dcm.AcquisitionTime
+          else:
+            acq_t = '000000'
 
-        self.acq_datetimes.append(acq_d + acq_t)
+          self.TemporalPositionIdentifiers.append(acq_d + acq_t)
 
-      self.acq_datetimes = np.array(self.acq_datetimes)
-      self.uniq_acq_datetimes = np.unique(self.acq_datetimes)
-      self.uniq_acq_datetimes.sort()
- 
+      self.TemporalPositionIdentifiers = np.array(self.TemporalPositionIdentifiers)
+      self.uniq_TemporalPositionIdentifiers = np.unique(self.TemporalPositionIdentifiers)
+      self.uniq_TemporalPositionIdentifiers.sort()
+
     # read static image
     if (self.series_type[0] == 'STATIC') or (self.series_type[0] == 'WHOLE BODY'):
       self.nframes = 1
@@ -212,15 +217,23 @@ class DicomVolume:
 
     # read dynamic / gated images
     else: 
-      self.nframes = len(self.uniq_acq_datetimes)
+      self.nframes = len(self.uniq_TemporalPositionIdentifiers)
       if frames is None: frames = np.arange(self.nframes) + 1
 
       data = []
+      self.AcquisitionTimes = np.empty(self.nframes, dtype = object)
+      self.AcquisitionDates = np.empty(self.nframes, dtype = object)
 
       for frame in frames:
         print('Reading frame ' + str(frame) + ' / ' + str(self.nframes))
-        inds = np.where(self.acq_datetimes == self.uniq_acq_datetimes[frame - 1])[0]
+        inds = np.where(self.TemporalPositionIdentifiers == self.uniq_TemporalPositionIdentifiers[frame - 1])[0]
         data.append(self.get_3d_data([self.dicomlist[i] for i in inds]))
+
+        # add the acuqisiton date and time of every frame
+        if 'AcquisitionTime' in self.dicomlist[inds[0]]: 
+          self.AcquisitionTimes[frame - 1] = self.dicomlist[inds[0]].AcquisitionTime
+        if 'AcquisitionDate' in self.dicomlist[inds[0]]: 
+          self.AcquisitionDates[frame - 1] = self.dicomlist[inds[0]].AcquisitionDate
 
       data = np.squeeze(np.array(data))
 
