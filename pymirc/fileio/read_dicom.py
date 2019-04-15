@@ -84,19 +84,17 @@ class DicomVolume:
 
   #------------------------------------------------------------------------------------------------------
   def reorient_volume(self, patvol):
-  """reorient the raw dicom volume to LPS orientation
+    """reorient the raw dicom volume to LPS orientation
 
-  Parameters
-  ----------
-  patvol : 3d numpy array
+    Parameters
+    ----------
+    patvol : 3d numpy array
 
-
-  Returns
-  -------
-  3d numpy array
-     reoriented numpy array in LPS orientation
-
-  """
+    Returns
+    -------
+    3d numpy array
+       reoriented numpy array in LPS orientation
+    """
     # check the directions of the norm, col and row dir and revert some axis if necessary
     if(self.normdir == -1):
         patvol = patvol[::-1,:,:]
@@ -159,19 +157,24 @@ class DicomVolume:
 
   #------------------------------------------------------------------------------------------------------
   def get_data(self, frames = None):
-  """get the actual 3D or 4D image data 
+    """get the actual 3D or 4D image data 
 
-  Parameters
-  ----------
-  frames : list of ints, optional
-    if the data is 4D this can be a list of frame number to be read
-    the default None means read all frames
+    Parameters
+    ----------
+    frames : list of ints, optional
+      if the data is 4D this can be a list of frame number to be read
+      the default None means read all frames
 
-  Returns
-  -------
-  a 3D or 4D numpy array
-    array containing the data
-  """
+    Note
+    ----
+    This is a high level function that call the underlying function for
+    reading 3D, 4D or multislice data sets.
+
+    Returns
+    -------
+    a 3D or 4D numpy array
+      array containing the data
+    """
     if not self.read_all_dcms:
       print('Analyzing dicom headers')
       self.dicomlist     = [dicom.read_file(x) for x in self.filelist] 
@@ -192,6 +195,7 @@ class DicomVolume:
 
         self.acq_datetimes.append(acq_d + acq_t)
 
+      self.acq_datetimes = np.array(self.acq_datetimes)
       self.uniq_acq_datetimes = np.unique(self.acq_datetimes)
       self.uniq_acq_datetimes.sort()
  
@@ -206,7 +210,7 @@ class DicomVolume:
         # read 3d data stored in multiple 2d dicom files
         data = self.get_3d_data(self.dicomlist)
 
-    # read dynamic / gate images
+    # read dynamic / gated images
     else: 
       self.nframes = len(self.uniq_acq_datetimes)
       if frames is None: frames = np.arange(self.nframes) + 1
@@ -224,6 +228,17 @@ class DicomVolume:
    
   #------------------------------------------------------------------------------------------------------
   def get_multislice_3d_data(self, dicomfile):
+    """get data from a multislice 3D dicom file (as e.g. used in SPECT)
+
+    Parameters
+    ----------
+    dicomfile : str
+      name of the multislice dicom file
+
+    Returns
+    -------
+    a 3D numpy array
+    """
     dcm_data   = dicom.read_file(dicomfile)
     pixelarray = dcm_data.pixel_array
 
@@ -271,6 +286,17 @@ class DicomVolume:
 
   #------------------------------------------------------------------------------------------------------
   def get_3d_data(self, dicomlist):
+    """get the 3D data from a list of dicom data sets
+
+    Parameters
+    ----------
+    dicomframes : list 
+      list of dicom objects from pydicom
+
+    Returns
+    -------
+    a 3D numpy array
+    """
     d = [self.distanceMeasure(x) for x in dicomlist]
 
     # sort the list according to the distance measure
@@ -338,26 +364,26 @@ class DicomVolume:
 
   #--------------------------------------------------------------------------
   def get_3d_overlay_img(self, tag = 0x6002):
-  """ Read dicom overlay information and convert it to a binary image.
-  
-  Parameters
-  ----------
-  tag : int in hex, optional
-    overlay tag to use, default 0x6002 
+    """ Read dicom overlay information and convert it to a binary image.
+    
+    Parameters
+    ----------
+    tag : int in hex, optional
+      overlay tag to use, default 0x6002 
 
-  Note
-  ----
-  (1) up to 8 overlays can be saved in the tags 0x6000, 0x6002, 0x6004, 0x6006, 0x6008, 0x600a, 0x600c, 0x600e
+    Note
+    ----
+    (1) up to 8 overlays can be saved in the tags 0x6000, 0x6002, 0x6004, 0x6006, 0x6008, 0x600a, 0x600c, 0x600e
 
-  (2) the generation of the binary label image was only tested for transaxial CT overlays so far
+    (2) the generation of the binary label image was only tested for transaxial CT overlays so far
 
-  (3) so far it only works for negative origins
+    (3) so far it only works for negative origins
 
-  Returns
-  -------
-  3d numpy array
-    a binary array containing the overlay information
-  """
+    Returns
+    -------
+    3d numpy array
+      a binary array containing the overlay information
+    """
     # up to know we assume that the input dicom list is a 3D volume
     # so we use all dicom files as input for the overlay
 
@@ -435,46 +461,46 @@ class DicomVolume:
 ################################################################################
 
 class DicomSearch:
+  
+  def __init__(self, path, pattern = '*.dcm'):
+    self.path     = path
+    self.pattern  = pattern 
+    self.allfiles = glob.glob(os.path.join(self.path,self.pattern)) 
+
+    self.UIDs     = []
+
+    # first read all dicom images to get the UIDs
+    for fname in self.allfiles:
+      dicomfile = dicom.read_file(fname)
+      self.UIDs.append(dicomfile.SeriesInstanceUID)
+      dicomfile.clear()
     
-    def __init__(self, path, pattern = '*.dcm'):
-        self.path     = path
-        self.pattern  = pattern 
-        self.allfiles = glob.glob(os.path.join(self.path,self.pattern)) 
+    # now lets remove all duplicates
+    self.uniqueUIDs    = list(set(self.UIDs))
 
-        self.UIDs     = []
- 
-        # first read all dicom images to get the UIDs
-        for fname in self.allfiles:
-            dicomfile = dicom.read_file(fname)
-            self.UIDs.append(dicomfile.SeriesInstanceUID)
-            dicomfile.clear()
-        
-        # now lets remove all duplicates
-        self.uniqueUIDs    = list(set(self.UIDs))
+    self.inds       = []
+    self.files      = []
+    self.SeriesDescription = []
+    self.AcquisitionDate   = []
+    self.AcquisitionTime   = []
+    self.PatientName       = []
+    self.Modality          = []
 
-        self.inds       = []
-        self.files      = []
-        self.SeriesDescription = []
-        self.AcquisitionDate   = []
-        self.AcquisitionTime   = []
-        self.PatientName       = []
-        self.Modality          = []
+    # now read 1 dicom file of each unique UID and extract some usefule information
+    for uid in self.uniqueUIDs:
+      self.inds.append([i for i in range(len(self.UIDs)) if self.UIDs[i] == uid])
+      self.files.append([self.allfiles[x] for x in self.inds[-1]])
+     
+      dicomfile = dicom.read_file(self.files[-1][0])
+      if 'SeriesDescription' in dicomfile : self.SeriesDescription.append(dicomfile.SeriesDescription)
+      else                                : self.SeriesDescription.append(None)
+      if 'AcquisitionDate'   in dicomfile : self.AcquisitionDate.append(dicomfile.AcquisitionDate)
+      else                                : self.AcquisitionDate.append(None)
+      if 'AcquisitionTime'   in dicomfile : self.AcquisitionTime.append(dicomfile.AcquisitionTime)
+      else                                : self.AcquisitionTime.append(None)
+      if 'PatientName'       in dicomfile : self.PatientName.append(dicomfile.PatientName)
+      else                                : self.PatientName.append(None)
+      if 'Modality'          in dicomfile : self.Modality.append(dicomfile.Modality)
+      else                                : self.Modality.append(None)
 
-        # now read 1 dicom file of each unique UID and extract some usefule information
-        for uid in self.uniqueUIDs:
-            self.inds.append([i for i in range(len(self.UIDs)) if self.UIDs[i] == uid])
-            self.files.append([self.allfiles[x] for x in self.inds[-1]])
-           
-            dicomfile = dicom.read_file(self.files[-1][0])
-            if 'SeriesDescription' in dicomfile : self.SeriesDescription.append(dicomfile.SeriesDescription)
-            else                                : self.SeriesDescription.append(None)
-            if 'AcquisitionDate'   in dicomfile : self.AcquisitionDate.append(dicomfile.AcquisitionDate)
-            else                                : self.AcquisitionDate.append(None)
-            if 'AcquisitionTime'   in dicomfile : self.AcquisitionTime.append(dicomfile.AcquisitionTime)
-            else                                : self.AcquisitionTime.append(None)
-            if 'PatientName'       in dicomfile : self.PatientName.append(dicomfile.PatientName)
-            else                                : self.PatientName.append(None)
-            if 'Modality'          in dicomfile : self.Modality.append(dicomfile.Modality)
-            else                                : self.Modality.append(None)
-
-            dicomfile.clear()
+      dicomfile.clear()
