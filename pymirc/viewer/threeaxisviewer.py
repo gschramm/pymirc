@@ -85,6 +85,11 @@ class ThreeAxisViewer:
 
     self.sl_t = sl_t
 
+    if self.ndim == 4:
+      self.fstr = ', ' + str(self.sl_t)
+    else:
+      self.fstr = ''
+
     self.imshow_kwargs = imshow_kwargs
     
     if not isinstance(self.imshow_kwargs,list): 
@@ -131,9 +136,9 @@ class ThreeAxisViewer:
       self.ax[i,1].set_axis_off()    
       self.ax[i,2].set_axis_off()
     
-    self.ax[0,0].set_title(str(self.sl_z),fontsize='small') 
-    self.ax[0,1].set_title(str(self.sl_y),fontsize='small') 
-    self.ax[0,2].set_title(str(self.sl_x),fontsize='small') 
+    self.ax[0,0].set_title(str(self.sl_z) + self.fstr, fontsize='small') 
+    self.ax[0,1].set_title(str(self.sl_y) + self.fstr, fontsize='small') 
+    self.ax[0,2].set_title(str(self.sl_x) + self.fstr, fontsize='small') 
 
     # connect the image figure with actions
     self.fig.canvas.mpl_connect('scroll_event',self.onscroll)
@@ -145,7 +150,7 @@ class ThreeAxisViewer:
 
     # set up figure for colorbar and ...
     self.fig_cb, self.ax_cb = py.subplots(self.n_vols, 1, figsize = (1,width*fig_asp), squeeze = False)
-    self.fig_cb.subplots_adjust(left=0,right=0.3,bottom=0.02,top=0.98,wspace=0.05,hspace=0.05)
+    self.fig_cb.subplots_adjust(left=0,right=0.3,bottom=0.02,top=0.96,wspace=0.05,hspace=0.05)
     self.fig_cb.show()
 
     cbmax     = 255
@@ -229,7 +234,7 @@ class ThreeAxisViewer:
   def redraw_transversal(self):
     for i in range(self.n_vols):
       self.imgs[i][0].set_data(np.squeeze(self.vols[i][tuple(self.sl0)].T))
-    self.ax[0,0].set_title(str(self.sl_z),fontsize='small') 
+    self.ax[0,0].set_title(str(self.sl_z) + self.fstr,fontsize='small') 
     if self.showCross:
         for l in self.l0x: l.set_xdata(self.sl_x) 
         for l in self.l0y: l.set_ydata(self.sl_y) 
@@ -239,7 +244,7 @@ class ThreeAxisViewer:
   def redraw_coronal(self):
     for i in range(self.n_vols):
       self.imgs[i][1].set_data(np.squeeze(np.flip(self.vols[i][tuple(self.sl1)].T,0)))
-    self.ax[0,1].set_title(str(self.sl_y),fontsize='small') 
+    self.ax[0,1].set_title(str(self.sl_y) + self.fstr,fontsize='small') 
     if self.showCross:
         for l in self.l1x: l.set_xdata(self.sl_x) 
         for l in self.l1y: l.set_ydata(self.shape[self.iz] - self.sl_z - 1) 
@@ -249,7 +254,7 @@ class ThreeAxisViewer:
   def redraw_sagittal(self):
     for i in range(self.n_vols):
       self.imgs[i][2].set_data(np.squeeze(np.flip(self.vols[i][tuple(self.sl2)].T,0)))
-    self.ax[0,2].set_title(str(self.sl_x),fontsize='small') 
+    self.ax[0,2].set_title(str(self.sl_x) + self.fstr,fontsize='small') 
     if self.showCross:
         for l in self.l2x: l.set_xdata(self.sl_y) 
         for l in self.l2y: l.set_ydata(self.shape[self.iz] - self.sl_z - 1) 
@@ -280,6 +285,7 @@ class ThreeAxisViewer:
       self.sl2          = [slice(None)]*self.ndim
       self.sl2[self.ix] = slice(self.sl_x, self.sl_x+1)
       self.sl2[0]       = slice(self.sl_t, self.sl_t+1)
+      self.fstr         = ', ' + str(self.sl_t)
 
   #------------------------------------------------------------------------
   def add_contour(self, N = 3, source = 0, target = 1, cmap = py.cm.autumn):
