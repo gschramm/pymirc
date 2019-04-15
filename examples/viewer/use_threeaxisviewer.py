@@ -14,10 +14,11 @@ import pymirc.image_operations as pymi
 data_dir = os.path.join('..','..','data','nema_petct')
 
 if not os.path.exists(data_dir):
-  url = 'https://kuleuven.box.com/s/wub9pk0yvt8kjqyj7p0bz11boca4334x/nema_petct.zip'
+  url = 'https://kuleuven.box.com/s/wub9pk0yvt8kjqyj7p0bz11boca4334x'
   print('please first download example PET/CT data from:')
   print(url)
   print('and unzip into: ', data_dir)
+  sys.exit()
 
 # read PET/CT nema phantom dicom data sets from
 pet_dcm = pymf.DicomVolume(os.path.join(data_dir,'PT','*.dcm'))
