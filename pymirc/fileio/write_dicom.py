@@ -18,6 +18,7 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
                       uid_base                               = '1.2.826.0.1.3680043.9.7147.', # UID root for Georg Schramm
                       PatientName                            = 'Test^Patient',
                       PatientID                              = '08150815',
+                      AccessionNumber                        = '08150815',
                       StudyDescription                       = 'test study',
                       SeriesDescription                      = 'test series',
                       PixelSpacing                           = ['1','1'],
@@ -58,6 +59,7 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
   uid_base                                | 
   PatientName                             | 
   PatientID                               | 
+  AccessionNumber                         | 
   StudyDescription                        | 
   SeriesDescription                       | 
   PixelSpacing                            | 
