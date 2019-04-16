@@ -11,10 +11,9 @@ pymirc is a collection of common python imaging routines
 the medical imaging research center of KU Leuven.
 
 ## Dependencies
-
-* python3
-* numpy  v.??
-* scipy  v.??
-* numba  v.??
-* pydicm v.?? (only fileio)
-* pylab  v.?? (only viewer)
+*python>=3.6
+*numpy>=1.15.0
+*scipy>=1.1.0
+*numba>=0.39.0
+*matplotlib>=2.2.2
+*pydicom>=1.1.0
