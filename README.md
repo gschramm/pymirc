@@ -21,5 +21,5 @@ the medical imaging research center of KU Leuven.
 The examples subdirectory contains minimal examples 
 on how to use the most important functions.
 To run those, you don't need to install the package
-(it is added to path automatically).
+(it is added to the PYTHONPATH automatically via sys).
 
