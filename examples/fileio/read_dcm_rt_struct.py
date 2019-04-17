@@ -1,15 +1,26 @@
-import pydicom
-import numpy as np
-import pylab as py
-
-from matplotlib.patches import Polygon
+import sys, os
 
 #-------------------------------------------------------------------------------------
-import sys, os
 pymirc_path = os.path.join('..','..')
 if not pymirc_path in sys.path: sys.path.append(pymirc_path)
 import pymirc.fileio as pymf
+import pymirc.viewer as pymv
 
+import numpy as np
+import pylab as py
+
+# check of data is there
+data_dir = os.path.join('..','..','data','nema_petct')
+
+if not os.path.exists(data_dir):
+  url = 'https://kuleuven.box.com/s/wub9pk0yvt8kjqyj7p0bz11boca4334x'
+  print('please first download example PET/CT data from:')
+  print(url)
+  print('and unzip into: ', data_dir)
+  sys.exit()
+
+
+# read CT vol that was used to generate ROIs in rtstruct file
 ct_dcm = pymf.DicomVolume('../../data/nema_petct/CT/*.dcm')
 ct_vol = ct_dcm.get_data()
 
@@ -17,73 +28,34 @@ aff   = ct_dcm.affine
 shape = ct_vol.shape 
 
 #-------------------------------------------------------------------------------------
-ds = pydicom.read_file('../../data/nema_petct/sphere_rt_struct/rt_struct.dcm')
+# read the rt struct data
+rtstruct_file = '../../data/nema_petct/rois/nonconvex_rtstruct.dcm'
 
-ctrs = ds.ROIContourSequence
+# read the ROI contours (in world coordinates)
+contour_data = pymf.read_rtstruct_contour_data(rtstruct_file)
 
-contour_data = []
-
-for i in range(len(ctrs)):
-  contour_seq    = ctrs[i].ContourSequence
-  contour_points = []
-
-  for cs in contour_seq:
-    cp = np.array(cs.ContourData).reshape(-1,3)
-    contour_points.append(cp)
-
-  cd = {'contour_points': contour_points, 
-        'GeometricType':  cs.ContourGeometricType,
-        'Number':         ctrs[i].ReferencedROINumber}
-
-  for key in ['ROIName','ROIDescription']:
-    if key in ds.StructureSetROISequence[i]: cd[key] = getattr(ds.StructureSetROISequence[i], key)
-
-  contour_data.append(cd)
-
-#--------------------------------------------------------------------
-# convert contour data to index array
-
-roi_inds = []
-
-for iroi in range(len(contour_data)):
-  contour_points = contour_data[iroi]['contour_points']
- 
-  roi_number = int(contour_data[iroi]['Number'])
-
-  roi_inds0 = []
-  roi_inds1 = []
-  roi_inds2 = []
-
-  for cp in contour_points:
-    # get the slice of the current contour
-    sl = int(round((np.linalg.inv(ct_dcm.affine) @ np.concatenate([cp[0,:],[1]]))[2]))
-
-    # get the minimum and maximum voxel coordinate of the contour in the slice
-    i_min = np.floor((np.linalg.inv(ct_dcm.affine) @ np.concatenate([cp.min(axis=0),[1]]))[:2]).astype(int)
-    i_max = np.ceil((np.linalg.inv(ct_dcm.affine) @ np.concatenate([cp.max(axis=0),[1]]))[:2]).astype(int)
-
-    n_test = i_max + 1 - i_min
-
-    poly = Polygon(cp[:,:-1], True)
-
-    for i in np.arange(i_min[0], i_min[0] + n_test[0]):
-      for j in np.arange(i_min[1], i_min[1] + n_test[1]):
-        if poly.contains_point((aff @ np.array([i,j,sl,1]))[:2]):
-          roi_inds0.append(i)
-          roi_inds1.append(j)
-          roi_inds2.append(sl)
-
-
-  roi_inds.append((np.array(roi_inds0), np.array(roi_inds1), np.array(roi_inds2)))
+# convert contour data to index arrays (voxel space)
+roi_inds = pymf.convert_contour_data_to_roi_indices(contour_data, aff, shape)
 
 #---------------------------------------------------------------------------
-roi_vol = np.zeros(ct_vol.shape)
+# create a label array
+roi_vol = np.zeros(shape)
 
 for i in range(len(roi_inds)):
-  roi_vol[roi_inds[i]] = i + 1
+  roi_vol[roi_inds[i]] = int(contour_data[i]['ROINumber'])
 
 #---------------------------------------------------------------------------
-import pymirc.viewer as pymv
-vi = pymv.ThreeAxisViewer([ct_vol,roi_vol], voxsize=ct_dcm.voxsize)
+# print some ROI statistics
 
+print('ROI name.....:', [x['ROIName']     for x in contour_data])
+print('ROI number...:', [x['ROINumber']   for x in contour_data])
+print('ROI mean.....:', [ct_vol[x].mean() for x in roi_inds])
+print('ROI max......:', [ct_vol[x].max()  for x in roi_inds])
+print('ROI min......:', [ct_vol[x].min()  for x in roi_inds])
+print('ROI # voxel..:', [len(ct_vol[x])   for x in roi_inds])
 
+#---------------------------------------------------------------------------
+# view the results
+imshow_kwargs = [{'cmap':py.cm.Greys_r,'vmin':-500,'vmax':500},
+                 {'cmap':py.cm.nipy_spectral,'vmin':0,'vmax':len(roi_inds)}]
+vi = pymv.ThreeAxisViewer([ct_vol,roi_vol], voxsize=ct_dcm.voxsize, imshow_kwargs = imshow_kwargs)
