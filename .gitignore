@@ -1,5 +1,6 @@
 # files / folders to be ignored (manual)
 data/*
+wip/*
 
 #--- auto generated python ignores ----
 # Byte-compiled / optimized / DLL files
