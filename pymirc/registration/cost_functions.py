@@ -130,25 +130,6 @@ def neg_mutual_information(x, y, nbins = 40, norm = True):
   return mi
 
 #---------------------------------------------------------------- 
-def squared_euclidean_dist(x,y):
-  """Squared Euclidean distance between two 3D volumes
-
-  Parameters
-  ----------
-  x : 3D numpy array 
-    first input
-
-  y : 3D numpy array 
-    second input
- 
-  Returns
-  -------
-  float
-    containing the squared Euclidean distance
-  """
-  return np.sqrt(((x-y)**2).sum())
-
-#---------------------------------------------------------------- 
 def regis_cost_func(params, img_fix, img_float, verbose = False,
                     rotate = True, metric = neg_mutual_information):
   """Generic cost function for rigid registration
