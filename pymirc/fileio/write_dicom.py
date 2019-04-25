@@ -103,6 +103,12 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
   DecayFactor                             
   DoseCalibrationFactor                  
   ImageIndex                             
+
+  Returns
+  -------
+  str
+    containing the ouput file name  
+
   """
   # create output dir if it does not exist
   if not os.path.exists(outputdir): os.mkdir(outputdir)
@@ -232,6 +238,7 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
   if verbose: print("Writing file", os.path.join(outputdir,filename))
   dicom.filewriter.write_file(os.path.join(outputdir,filename), ds, write_like_original = False)
 
+  return os.path.join(outputdir,filename)
 
 ###########################################################################################
 
@@ -282,6 +289,11 @@ def write_3d_static_dicom(vol_lps,
   **kwargs : dict, optional
     passed to write_dicom_slice
 
+  Returns
+  -------
+  list
+    containing the file names of the written 2D dicom files
+
   Note
   ----
   This function is a wrapper around write_dicom_slice.
@@ -312,21 +324,25 @@ def write_3d_static_dicom(vol_lps,
 
   numSlices = vol_lps.shape[2]
 
+  fnames = []
+
   for i in range(vol_lps.shape[-1]):
-    write_dicom_slice(vol_lps[:,:,i], 
-                      uid_base                = uid_base,
-                      ImagePositionPatient    = (lps_origin + i*zvoxsize*nz).astype('str').tolist(),
-                      ImageOrientationPatient = np.concatenate((nx,ny)).astype('str').tolist(),
-                      PixelSpacing            = [str(xvoxsize), str(yvoxsize)],
-                      SliceThickness          = str(zvoxsize),
-                      RescaleSlope            = RescaleSlope,
-                      RescaleIntercept        = RescaleIntercept,
-                      StudyInstanceUID        = StudyInstanceUID, 
-                      SeriesInstanceUID       = SeriesInstanceUID, 
-                      FrameOfReferenceUID     = FrameOfReferenceUID,
-                      outputdir               = outputdir,
-                      NumberOfSlices          = numSlices,
-                      **kwargs)
+    fnames.append(write_dicom_slice(vol_lps[:,:,i], 
+                                    uid_base                = uid_base,
+                                    ImagePositionPatient    = (lps_origin + i*zvoxsize*nz).astype('str').tolist(),
+                                    ImageOrientationPatient = np.concatenate((nx,ny)).astype('str').tolist(),
+                                    PixelSpacing            = [str(xvoxsize), str(yvoxsize)],
+                                    SliceThickness          = str(zvoxsize),
+                                    RescaleSlope            = RescaleSlope,
+                                    RescaleIntercept        = RescaleIntercept,
+                                    StudyInstanceUID        = StudyInstanceUID, 
+                                    SeriesInstanceUID       = SeriesInstanceUID, 
+                                    FrameOfReferenceUID     = FrameOfReferenceUID,
+                                    outputdir               = outputdir,
+                                    NumberOfSlices          = numSlices,
+                                    **kwargs))
+
+  return fnames
 
 ###################################################################################################
 
@@ -359,6 +375,12 @@ def write_4d_dicom(vol_lps,
           In the second case, each time frame gets the same values
           (e.g. for PatientWeight or affine)        
 
+  Returns
+  -------
+  list of lists
+    containing the filenames of the written 2D dicom files
+    each element containg the filenames of one frame
+
   Note
   ----
   This function is a wrapper around write_3d_static_dicom.
@@ -371,19 +393,23 @@ def write_4d_dicom(vol_lps,
 
   numSlices = vol_lps.shape[-1]
 
+  fnames = []
+
   for i in range(numFrames):
     kw = {}
     for key, value in kwargs.items():
       if type(value) is list: kw[key] = value[i]
       else:                   kw[key] = value
 
-    write_3d_static_dicom(vol_lps[i,...], 
-                          outputdir,
-                          uid_base                   = uid_base,
-                          TemporalPositionIdentifier = i + 1,
-                          NumberOfTemporalPositions  = numFrames,
-                          StudyInstanceUID           = StudyInstanceUID,   
-                          SeriesInstanceUID          = SeriesInstanceUID,  
-                          FrameOfReferenceUID        = FrameOfReferenceUID,
-                          SeriesType                 = SeriesType,
-                          **kw)
+    fnames.append(write_3d_static_dicom(vol_lps[i,...], 
+                                        outputdir,
+                                        uid_base                   = uid_base,
+                                        TemporalPositionIdentifier = i + 1,
+                                        NumberOfTemporalPositions  = numFrames,
+                                        StudyInstanceUID           = StudyInstanceUID,   
+                                        SeriesInstanceUID          = SeriesInstanceUID,  
+                                        FrameOfReferenceUID        = FrameOfReferenceUID,
+                                        SeriesType                 = SeriesType,
+                                        **kw))
+
+  return fnames
