@@ -137,16 +137,12 @@ def binary_2d_image_to_contours(img):
     obj_slices         = find_objects(regions)
 
     if nrois_new != nrois:
-      print(nrois)
       nrois = nrois_new
     else:
-      for i in range(len(obj_slices)):
-        obj = img_copy[obj_slices[i]]
-        lab = label(obj)
-        for tmp in cheese_to_contours(obj):
-          tmp[:,0] += obj_slices[i][0].start
-          tmp[:,1] += obj_slices[i][1].start
-         
+      for i in range(nrois):
+        obj = (regions == (i + 1)).astype(int)
+
+        for tmp in cheese_to_contours(obj)[:1]:
           contours.append(tmp) 
           
         # delete the processed rois from the label array
