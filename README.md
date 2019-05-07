@@ -2,7 +2,7 @@
 general python KUL MIRC imaging routines
 
 ## authors
-georg.schramm@kuleuven.be, jeroen.blommaert@kuleuven.be, tom.eelbode@kuleuven.be
+georg.schramm@kuleuven.be, jeroen.bertels@kuleuven.be, tom.eelbode@kuleuven.be, siri.willems@kuleuven.be
 
 ## Purpose
 pymirc is a collection of common python imaging routines
