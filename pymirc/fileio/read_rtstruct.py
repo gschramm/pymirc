@@ -2,8 +2,46 @@ import pydicom
 import numpy as np
 import pylab as py
 
+from scipy.spatial      import ConvexHull
 from matplotlib.patches import Polygon 
 #import shapely.geometry as shg
+
+#---------------------------------------------------------------------
+def contour_orientation(c):
+  """ Orientation of a 2D closed Polygon
+
+  Parameters
+  ----------
+  c : (n,2) numpy array
+    containing the x,y coordinates of the contour points
+
+  Returns
+  -------
+  bool
+    meaning counter-clockwise and clockwise orientation
+
+  References
+  ----------
+  https://en.wikipedia.org/wiki/Curve_orientation
+
+  """
+  cc = ConvexHull(c[:,:2])
+  cc.vertices.sort()
+  x = c[cc.vertices,0]  
+  y = c[cc.vertices,1]  
+
+  ic = 2
+  d  = 0 
+
+  while d == 0:
+    d = (x[1] - x[0])*(y[ic] - y[0]) - (x[ic] - x[0])*(y[1] - y[0])
+    ic = (ic + 1) % c.shape[0]
+
+  ori = (d > 0)
+
+  return ori
+
+#---------------------------------------------------------------------
 
 def read_rtstruct_contour_data(rtstruct_file):
   """Read dicom RTSTRUCT contour data
@@ -44,20 +82,26 @@ def read_rtstruct_contour_data(rtstruct_file):
   for i in range(len(ctrs)):
     contour_seq    = ctrs[i].ContourSequence
     contour_points = []
+    contour_orientations = []
   
     for cs in contour_seq:
       cp = np.array(cs.ContourData).reshape(-1,3)
-      contour_points.append(cp)
+      if cp.shape[0] >= 3:
+        contour_points.append(cp)
+        contour_orientations.append(contour_orientation(cp[:,:2]))
+
+    if len(contour_points) > 0: 
+      cd = {'contour_points':       contour_points, 
+            'contour_orientations': contour_orientations, 
+            'GeometricType':        cs.ContourGeometricType,
+            'Number':               ctrs[i].ReferencedROINumber,
+            'FrameOfReferenceUID':  FrameOfReferenceUID}
   
-    cd = {'contour_points':      contour_points, 
-          'GeometricType':       cs.ContourGeometricType,
-          'Number':              ctrs[i].ReferencedROINumber,
-          'FrameOfReferenceUID': FrameOfReferenceUID}
+      for key in ['ROIName','ROIDescription','ROINumber','ReferencedFrameOfReferenceUID','ROIGenerationAlgorithm']:
+        if key in ds.StructureSetROISequence[i]: cd[key] = getattr(ds.StructureSetROISequence[i], key)
   
-    for key in ['ROIName','ROIDescription','ROINumber','ReferencedFrameOfReferenceUID','ROIGenerationAlgorithm']:
-      if key in ds.StructureSetROISequence[i]: cd[key] = getattr(ds.StructureSetROISequence[i], key)
-  
-    contour_data.append(cd)
+      contour_data.append(cd)
+
 
   return contour_data
 
@@ -107,35 +151,73 @@ def convert_contour_data_to_roi_indices(contour_data, aff, shape, radius = None)
   roi_inds = []
   
   for iroi in range(len(contour_data)):
-    contour_points = contour_data[iroi]['contour_points']
+    print(iroi, len(contour_data))
+    contour_points       = contour_data[iroi]['contour_points']
+    contour_orientations = np.array(contour_data[iroi]['contour_orientations'])
    
     roi_number = int(contour_data[iroi]['Number'])
-  
+   
     roi_inds0 = []
     roi_inds1 = []
     roi_inds2 = []
+ 
+    # calculate the slices of all contours
+    sls = np.array([int(round((np.linalg.inv(aff) @ np.concatenate([x[0,:],[1]]))[2])) for x in contour_points])
+    sls_uniq = np.unique(sls)
+
+    for sl in sls_uniq:
+      sl_inds =  np.where(sls == sl)[0]
+
+      if np.any(np.logical_not(contour_orientations[sl_inds])):
+        # case where we have negative contours (holes) in the slices
+        bin_img = np.zeros(shape[:2], dtype = np.int16)
+        for ip in sl_inds:
+          cp = contour_points[ip] 
   
-    for cp in contour_points:
-      # get the slice of the current contour
-      sl = int(round((np.linalg.inv(aff) @ np.concatenate([cp[0,:],[1]]))[2]))
+          # get the minimum and maximum voxel coordinate of the contour in the slice
+          i_min = np.floor((np.linalg.inv(aff) @ np.concatenate([cp.min(axis=0),[1]]))[:2]).astype(int)
+          i_max = np.ceil((np.linalg.inv(aff) @ np.concatenate([cp.max(axis=0),[1]]))[:2]).astype(int)
   
-      # get the minimum and maximum voxel coordinate of the contour in the slice
-      i_min = np.floor((np.linalg.inv(aff) @ np.concatenate([cp.min(axis=0),[1]]))[:2]).astype(int)
-      i_max = np.ceil((np.linalg.inv(aff) @ np.concatenate([cp.max(axis=0),[1]]))[:2]).astype(int)
+          n_test = i_max + 1 - i_min
   
-      n_test = i_max + 1 - i_min
+          poly = Polygon(cp[:,:-1], True)
+ 
+          contour_orientation = contour_orientations[ip] 
+ 
+          for i in np.arange(i_min[0], i_min[0] + n_test[0]):
+            for j in np.arange(i_min[1], i_min[1] + n_test[1]):
+              if poly.contains_point((aff @ np.array([i,j,sl,1]))[:2], radius = radius):
+                if contour_orientation:
+                  bin_img[i,j] += 1
+                else:
+                  bin_img[i,j] -= 1
+        inds0, inds1 = np.where(bin_img > 0)
+        inds2 = np.repeat(sl,len(inds0))
+
+        roi_inds0 = roi_inds0  + inds0.tolist() 
+        roi_inds1 = roi_inds1  + inds1.tolist()
+        roi_inds2 = roi_inds2  + inds2.tolist()
+
+      else:
+        # case where we don't have negative contours (holes) in the slices
+        for ip in sl_inds:
+          cp = contour_points[ip] 
   
-      poly = Polygon(cp[:,:-1], True)
-      #poly = shg.Polygon(cp[:,:-1])
+          # get the minimum and maximum voxel coordinate of the contour in the slice
+          i_min = np.floor((np.linalg.inv(aff) @ np.concatenate([cp.min(axis=0),[1]]))[:2]).astype(int)
+          i_max = np.ceil((np.linalg.inv(aff) @ np.concatenate([cp.max(axis=0),[1]]))[:2]).astype(int)
   
-      for i in np.arange(i_min[0], i_min[0] + n_test[0]):
-        for j in np.arange(i_min[1], i_min[1] + n_test[1]):
-          if poly.contains_point((aff @ np.array([i,j,sl,1]))[:2], radius = radius):
-          #if poly.contains(shg.Point((aff @ np.array([i,j,sl,1]))[:2])):
-            roi_inds0.append(i)
-            roi_inds1.append(j)
-            roi_inds2.append(sl)
+          n_test = i_max + 1 - i_min
   
+          poly = Polygon(cp[:,:-1], True)
+ 
+          for i in np.arange(i_min[0], i_min[0] + n_test[0]):
+            for j in np.arange(i_min[1], i_min[1] + n_test[1]):
+              if poly.contains_point((aff @ np.array([i,j,sl,1]))[:2], radius = radius):
+                roi_inds0.append(i)
+                roi_inds1.append(j)
+                roi_inds2.append(sl)
+
     roi_inds.append((np.array(roi_inds0), np.array(roi_inds1), np.array(roi_inds2)))
 
   return roi_inds
