@@ -79,17 +79,6 @@ def labelvol_to_rtstruct(roi_vol,
     else:
       warnings.warn(tag + ' not in reference dicom file -> will not be written')
 
-  ds.PatientName     = refdcm.PatientName
-  ds.PatientID       = refdcm.PatientID
-  ds.AccessionNumber = refdcm.AccessionNumber
-  ds.StudyID         = refdcm.StudyID
-  
-  ds.StudyDate  = refdcm.StudyDate
-  ds.StudyTime  = refdcm.StudyTime
-  ds.SeriesDate = refdcm.SeriesDate
-  ds.SeriesTime = refdcm.SeriesTime
-  #--- 
-
  
   ds.StudyInstanceUID  = refdcm.StudyInstanceUID
   ds.SeriesInstanceUID = pydicom.uid.generate_uid(uid_base)
@@ -99,9 +88,7 @@ def labelvol_to_rtstruct(roi_vol,
   
   ds.StructureSetLabel = structureSetLabel
   ds.StructureSetName  = structureSetName
-  ds.StructureSetDate  = refdcm.SeriesDate
-  ds.StructureSetTime  = refdcm.SeriesTime
-  
+
   dfr = pydicom.Dataset()
   dfr.FrameOfReferenceUID = refdcm.FrameOfReferenceUID
   
