@@ -43,13 +43,17 @@ def contour_orientation(c):
 
 #---------------------------------------------------------------------
 
-def read_rtstruct_contour_data(rtstruct_file):
+def read_rtstruct_contour_data(rtstruct_file,
+                               roinames = None):
   """Read dicom RTSTRUCT contour data
 
   Parameters
   ----------
-  restruct_file : str
+  rtstruct_file : str
     a dicom RTSTRUCT file
+
+  roinames : list of strings
+    ROINames to read - default None means read all ROIs
 
   Returns
   -------
@@ -78,8 +82,14 @@ def read_rtstruct_contour_data(rtstruct_file):
   ctrs = ds.ROIContourSequence
   
   contour_data = []
-  
-  for i in range(len(ctrs)):
+ 
+  allroinames = [x.ROIName if 'ROIName' in x else '' for x in ds.StructureSetROISequence]
+
+  if roinames is None: roinames = allroinames.copy()
+ 
+  for roiname in roinames:
+    i = allroinames.index(roiname)
+
     contour_seq    = ctrs[i].ContourSequence
     contour_points = []
     contour_orientations = []
@@ -151,7 +161,6 @@ def convert_contour_data_to_roi_indices(contour_data, aff, shape, radius = None)
   roi_inds = []
   
   for iroi in range(len(contour_data)):
-    print(iroi, len(contour_data))
     contour_points       = contour_data[iroi]['contour_points']
     contour_orientations = np.array(contour_data[iroi]['contour_orientations'])
    
