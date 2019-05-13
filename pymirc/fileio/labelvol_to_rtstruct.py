@@ -15,6 +15,9 @@ def labelvol_to_rtstruct(roi_vol,
                          seriesDescription = 'test rois',
                          structureSetLabel = 'RTstruct',
                          structureSetName  = 'my rois',
+                         roinames          = None,
+                         roidescriptions   = None,
+                         roigenerationalgs = None,
                          roi_colors        = [['255','0','0'],  ['0',  '0','255'],['0',  '255','0'],
                                             ['255','0','255'],['255','255','0'],['0','255','255']],
                          tags_to_copy      = ['PatientName','PatientID','AccessionNumber','StudyID',
@@ -52,11 +55,14 @@ def labelvol_to_rtstruct(roi_vol,
   structureSetLabel, structureSetName : string, optional
     Label and Name of the structSet
   
-  roi_colors: list of lists containing 3 integer strings (0 - 255)
+  roi_colors: list of lists containing 3 integer strings (0 - 255), optional
     used as ROI display colors
 
-  tags_to_copy: list of strings
+  tags_to_copy: list of strings, list optional
     extra dicom tags to copy from the refereced dicom file
+
+  roinames, roidescriptions, roigenerationalgs : lists, optional
+    containing strings for ROIName, ROIDescription and ROIGenerationAlgorithm
   """
 
   roinumbers = np.unique(roi_vol)
@@ -127,14 +133,18 @@ def labelvol_to_rtstruct(roi_vol,
   
   ds.StructureSetROISequence = pydicom.Sequence()
   ds.ROIContourSequence      = pydicom.Sequence()
-  
+ 
+  if roinames          is None: roinames          = ['ROI-' + str(x) for x in roinumbers]
+  if roidescriptions   is None: roidescriptions   = ['ROI-' + str(x) for x in roinumbers]
+  if roigenerationalgs is None: roigenerationalgs = len(roinumbers) * ['MANUAL']
+
   # loop over the ROIs
-  for iroi in roinumbers:
+  for iroi, roinumber in enumerate(roinumbers):
     dssr = pydicom.Dataset()
-    dssr.ROINumber      = iroi
-    dssr.ROIName        = 'ROI-' + str(dssr.ROINumber)
-    dssr.ROIDescription = 'ROI-' + str(dssr.ROINumber)
-    dssr.ROIGenerationAlgorithm        = 'MANUAL'
+    dssr.ROINumber      = roinumber
+    dssr.ROIName        = roinames[iroi]
+    dssr.ROIDescription = roidescriptions[iroi]
+    dssr.ROIGenerationAlgorithm        = roigenerationalgs[iroi]
     dssr.ReferencedFrameOfReferenceUID = dfr.FrameOfReferenceUID
     
     ds.StructureSetROISequence.append(dssr)
