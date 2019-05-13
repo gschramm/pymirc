@@ -15,6 +15,7 @@ def labelvol_to_rtstruct(roi_vol,
                          seriesDescription = 'test rois',
                          structureSetLabel = 'RTstruct',
                          structureSetName  = 'my rois',
+                         connect_holes     = True,
                          roinames          = None,
                          roidescriptions   = None,
                          roigenerationalgs = None,
@@ -54,15 +55,19 @@ def labelvol_to_rtstruct(roi_vol,
 
   structureSetLabel, structureSetName : string, optional
     Label and Name of the structSet
+
+  connect_holes : bool, optional
+    whether to connect inner holes to their outer parents contour - default: True
+    this connection is needed to show holes correctly in MIM
+
+  roinames, roidescriptions, roigenerationalgs : lists, optional
+    containing strings for ROIName, ROIDescription and ROIGenerationAlgorithm
   
   roi_colors: list of lists containing 3 integer strings (0 - 255), optional
     used as ROI display colors
 
   tags_to_copy: list of strings, list optional
     extra dicom tags to copy from the refereced dicom file
-
-  roinames, roidescriptions, roigenerationalgs : lists, optional
-    containing strings for ROIName, ROIDescription and ROIGenerationAlgorithm
   """
 
   roinumbers = np.unique(roi_vol)
@@ -175,7 +180,7 @@ def labelvol_to_rtstruct(roi_vol,
       bin_slice = bin_vol[:,:,sl]
   
       if bin_slice.max() > 0:
-        contours = pymi.binary_2d_image_to_contours(bin_slice)
+        contours = pymi.binary_2d_image_to_contours(bin_slice, connect_holes = connect_holes)
   
         for ic in range(len(contours)):
           npoints  = contours[ic].shape[0]
