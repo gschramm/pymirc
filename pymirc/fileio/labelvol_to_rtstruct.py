@@ -58,7 +58,11 @@ def labelvol_to_rtstruct(roi_vol,
   tags_to_copy: list of strings
     extra dicom tags to copy from the refereced dicom file
   """
-  nrois  = roi_vol.max()
+
+  roinumbers = np.unique(roi_vol)
+  roinumbers = roinumbers[roinumbers > 0]
+  nrois  = len(roinumbers)
+
   refdcm = pydicom.read_file(refdcm_file) 
  
   file_meta = pydicom.Dataset()
@@ -125,7 +129,7 @@ def labelvol_to_rtstruct(roi_vol,
   ds.ROIContourSequence      = pydicom.Sequence()
   
   # loop over the ROIs
-  for iroi in np.arange(1, nrois + 1):
+  for iroi in roinumbers:
     dssr = pydicom.Dataset()
     dssr.ROINumber      = iroi
     dssr.ROIName        = 'ROI-' + str(dssr.ROINumber)
