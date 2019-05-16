@@ -25,6 +25,7 @@ SeriesDate
 SeriesTime
 SingleCollimationWidth
 SpiralPitchFactor
+StudyInstanceUID
 StudyDate
 StudyDescription   
 StudyID

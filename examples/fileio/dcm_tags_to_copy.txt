@@ -18,6 +18,7 @@ RescaleType
 ScheduledProcedureStepID
 SeriesDate
 SeriesTime
+StudyInstanceUID
 StudyDate
 StudyDescription
 StudyID
