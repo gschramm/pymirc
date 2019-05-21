@@ -21,6 +21,8 @@ class ThreeAxisViewer:
      str specifying the line style of the cross hair (use '' for no cross hair)
   imshow_kwargs : list of dictionaries
      list of dictionaries with keyword arguments passed to pylab.imshow()
+  rowlabels : list of strings
+     containing the labels for every row (volume)
 
   Note
   ----
@@ -42,6 +44,7 @@ class ThreeAxisViewer:
                      sl_z          = None, 
                      sl_t          = 0, 
                      ls            = ':',
+                     rowlabels     = None,
                      imshow_kwargs = {}):
 
     if not isinstance(vols,list): 
@@ -145,7 +148,14 @@ class ThreeAxisViewer:
     self.fig.canvas.mpl_connect('button_press_event',self.onbuttonpress)
     self.fig.canvas.mpl_connect('key_press_event', self.onkeypress)
 
-    self.fig.subplots_adjust(left=0,right=1,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
+    if rowlabels is None:
+      self.fig.subplots_adjust(left=0,right=1,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
+
+    else:
+      for ivol, label in enumerate(rowlabels):
+        self.fig.text(0.01,1 - (ivol + 0.5)/self.n_vols, label, rotation='vertical', 
+                      size = 'large', verticalalignment = 'center')
+      self.fig.subplots_adjust(left=0.03,right=1,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
     self.fig.show()
 
     # set up figure for colorbar and ...
