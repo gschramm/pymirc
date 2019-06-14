@@ -16,11 +16,9 @@ parser.add_argument('output_dir',   help = 'directory containing the reference d
 parser.add_argument('--ref_dcm_pat',        help = 'file pattern for reference dicom files', default = '*')
 parser.add_argument('--dcm_tag_file',       help = 'txt file with dcm tags to copy', 
                     default = 'ct_dcm_tags_to_copy.txt')
-parser.add_argument('--kul_var_name',       help = 'name of recon variable in sav file', default = 'recon')
+parser.add_argument('--kul_var_name',       help = 'name of recon variable in sav file', default = 'reconbone')
 parser.add_argument('--series_desc_prefix', help = 'prefix for dcm series description', 
-                    default = '(KUL motion corrected)')
-parser.add_argument('--importer_computer',  help = 'PACS import computer', default = None)
-parser.add_argument('--importer_login',     help = 'PACS import login',    default = None)
+                    default = '(UZL motion corrected)')
 
 args       = parser.parse_args()
 output_dir = args.output_dir
@@ -63,28 +61,27 @@ dcm_out_fnames = pymf.write_3d_static_dicom(kul_recon, output_dir,
                                             **dcm_header_kwargs)
 
 # for PACS import we have to write two additional text files
-if (args.importer_computer is not None) and (args.importer_login is not None):
-  dcm_props = {}
-  dcm_props['import.type']       = 'cd'
-  dcm_props['study.size']        = kul_recon.shape[2] 
-  dcm_props['version']           = 2
-  dcm_props['study.uid']         = ref_dcm.firstdcmheader.StudyInstanceUID
-  dcm_props['institution']       = 'KUL'
-  dcm_props['importer.computer'] = args.importer_computer
-  dcm_props['study.date']        = ref_dcm.firstdcmheader.StudyDate[:8]
-  dcm_props['importer.login']    = args.importer_login
-  dcm_props['patient.ead']       = ref_dcm.firstdcmheader.PatientID
-  dcm_props['file.list']         = 'filelist.txt'
-  dcm_props['werkomgeving']      = 'UZL'
-  dcm_props['study.time']        = ref_dcm.firstdcmheader.StudyTime[:6]
-  dcm_props['modality']          = ref_dcm.firstdcmheader.Modality
-  dcm_props['study.description'] = ref_dcm.firstdcmheader.StudyDescription
-  
-  with open(os.path.join(output_dir, 'dicomimport.properties'), 'w') as f:
-    for key, value in dcm_props.items():
-      f.write(key + '=' + str(value) + '\n')
+dcm_props = {}
+dcm_props['import.type']       = 'cd'
+dcm_props['study.size']        = kul_recon.shape[2] 
+dcm_props['version']           = 2
+dcm_props['study.uid']         = ref_dcm.firstdcmheader.StudyInstanceUID
+dcm_props['institution']       = 'UZL'
+dcm_props['importer.computer'] = os.uname().nodename
+dcm_props['study.date']        = ref_dcm.firstdcmheader.StudyDate[:8]
+dcm_props['importer.login']    = 'Johan Nuyts'
+dcm_props['patient.ead']       = ref_dcm.firstdcmheader.PatientID
+dcm_props['file.list']         = 'filelist.txt'
+dcm_props['werkomgeving']      = 'UZL'
+dcm_props['study.time']        = ref_dcm.firstdcmheader.StudyTime[:6]
+dcm_props['modality']          = ref_dcm.firstdcmheader.Modality
+dcm_props['study.description'] = ref_dcm.firstdcmheader.StudyDescription
 
-  with open(os.path.join(output_dir, 'filelist.txt'), 'w') as f:
-    for fname in dcm_out_fnames:
-      f.write(os.path.basename(fname) + '\n')
-    f.write('COMPLETED')
+with open(os.path.join(output_dir, 'dicomimport.properties'), 'w') as f:
+  for key, value in dcm_props.items():
+    f.write(key + '=' + str(value) + '\n')
+
+with open(os.path.join(output_dir, 'filelist.txt'), 'w') as f:
+  for fname in dcm_out_fnames:
+    f.write(os.path.basename(fname) + '\n')
+  f.write('COMPLETED')
