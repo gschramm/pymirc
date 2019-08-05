@@ -12,8 +12,8 @@ parser = ArgumentParser()
 parser.add_argument('kul_sav_file',   help = 'filename of IDL sav file with KUL recon')
 parser.add_argument('ref_dcm_dir',    help = 'directory containing the reference dicom files')
 
-parser.add_argument('--output_dir',         help = 'name of the output directory', default = '.')
-parser.add_argument('--output_suffix',      help = 'suffix for the output directory', default = None)
+parser.add_argument('--output_dir',         help = 'name of the output master directory, default = studyID', default = None)
+parser.add_argument('--output_subdir',      help = 'name of the output sub directory, default = "kul_ct_recon"', default = 'kul_ct_recon')
 parser.add_argument('--ref_dcm_pat',        help = 'file pattern for reference dicom files', default = '*')
 parser.add_argument('--dcm_tag_file',       help = 'txt file with dcm tags to copy', 
                     default = 'ct_dcm_tags_to_copy.txt')
@@ -48,22 +48,24 @@ for tag in tags_to_copy:
   if tag in ref_dcm.firstdcmheader:
     dcm_header_kwargs[tag] = ref_dcm.firstdcmheader.data_element(tag).value
 
-# create the name of the output directoty
-if args.output_suffix is None:
-  output_suffix = os.path.splitext(os.path.basename(args.kul_sav_file))[0] + '_' + args.kul_var_name
+# crete the master output directory
+if args.output_dir is None:
+  output_dir = ref_dcm.firstdcmheader.StudyID
 else:
-  output_suffix = output_suffix
+  output_dir = args.output_dir
 
-output_dir = os.path.join(args.output_dir, ref_dcm.firstdcmheader.StudyInstanceUID + '_' + ref_dcm.firstdcmheader.AccessionNumber + '_' + output_suffix)
+if not os.path.isdir(output_dir):
+  os.makedirs(output_dir)
 
-if os.path.isdir(output_dir):
-  raise FileExistsError('output directory ' + output_dir + ' already exists')
+odir = os.path.join(output_dir, args.output_subdir)
 
+if os.path.isdir(odir):
+  raise FileExistsError('output directory ' + odir + ' already exists')
 
 # write the dicoms
 # the number of tags to be copied from the original recon can be extented
 new_series_desc = args.series_desc_prefix + ' ' + ref_dcm.firstdcmheader.SeriesDescription
-dcm_out_fnames = pymf.write_3d_static_dicom(kul_recon, output_dir, 
+dcm_out_fnames = pymf.write_3d_static_dicom(kul_recon, odir, 
                                             affine            = ref_dcm.affine,
                                             SeriesDescription = new_series_desc,
                                             modality          = ref_dcm.firstdcmheader.Modality,
@@ -87,11 +89,13 @@ dcm_props['modality']               = ref_dcm.firstdcmheader.Modality
 dcm_props['study.description']      = ref_dcm.firstdcmheader.StudyDescription
 dcm_props['study.accession.number'] = ref_dcm.firstdcmheader.AccessionNumber
 
-with open(os.path.join(output_dir, 'dicomimport.properties'), 'w') as f:
+with open(os.path.join(odir, 'dicomimport.properties'), 'w') as f:
   for key, value in dcm_props.items():
     f.write(key + '=' + str(value) + '\n')
 
-with open(os.path.join(output_dir, 'filelist.txt'), 'w') as f:
+with open(os.path.join(odir, 'filelist.txt'), 'w') as f:
   for fname in dcm_out_fnames:
     f.write(os.path.basename(fname) + '\n')
   f.write('COMPLETED')
+
+print('wrote: ', odir)
