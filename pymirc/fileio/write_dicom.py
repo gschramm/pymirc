@@ -136,8 +136,9 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
  
   # Add the data elements -- not trying to set all required here. Check DICOM
   # standard
-  ds.PatientName = PatientName
-  ds.PatientID   = PatientID
+  ds.PatientName     = PatientName
+  ds.PatientID       = PatientID
+  ds.AccessionNumber = AccessionNumber
 
   ds.Modality          = modality
   ds.StudyDescription  = StudyDescription
