@@ -39,11 +39,16 @@ class DicomVolume:
     self.firstdcmheader = dicom.read_file(self.filelist[0])
 
     if 'NumberOfFrames' in self.firstdcmheader:
-      # this is for multi slice data of the Siemens symbia spect
-      self.x = np.array(self.firstdcmheader.DetectorInformationSequence[0].ImageOrientationPatient[:3], 
-                        dtype = np.float) 
-      self.y = np.array(self.firstdcmheader.DetectorInformationSequence[0].ImageOrientationPatient[3:] , 
-                        dtype = np.float) 
+      # case of multi slice data (3d array in 1 dicom file
+      if 'DetectorInformationSequence' in self.firstdcmheader:     
+        # this is for multi slice data of the Siemens symbia spect
+        iop =  self.firstdcmheader.DetectorInformationSequence[0].ImageOrientationPatient
+      else:
+        # this is for multi slice data of molecubes
+        iop = self.firstdcmheader.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
+
+      self.x = np.array(iop[:3], dtype = np.float) 
+      self.y = np.array(iop[3:], dtype = np.float) 
 
       # set member variable that shows whether data has been read in
       self.read_all_dcms = True
@@ -58,7 +63,11 @@ class DicomVolume:
     self.n = np.cross(self.x,self.y)
 
     # get the row and column pixelspacing 
-    self.pixelspacing = np.array(self.firstdcmheader.PixelSpacing, dtype = np.float) 
+    if 'PixelSpacing' in self.firstdcmheader:
+      self.pixelspacing = np.array(self.firstdcmheader.PixelSpacing, dtype = np.float) 
+    else:
+      self.pixelspacing = np.array(self.firstdcmheader.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing)
+     
     self.dr           = self.pixelspacing[0]
     self.dc           = self.pixelspacing[1]
 
@@ -241,7 +250,7 @@ class DicomVolume:
    
   #------------------------------------------------------------------------------------------------------
   def get_multislice_3d_data(self, dicomfile):
-    """get data from a multislice 3D dicom file (as e.g. used in SPECT)
+    """get data from a multislice 3D dicom file (as e.g. used in SPECT or molecubes dicoms)
 
     Parameters
     ----------
@@ -253,12 +262,19 @@ class DicomVolume:
     a 3D numpy array
     """
     dcm_data   = dicom.read_file(dicomfile)
-    pixelarray = dcm_data.pixel_array
+    pixelarray = dcm_data.pixel_array.copy()
 
     self.Nslices, self.Nrows, self.Ncols = pixelarray.shape
 
-    if 'RescaleSlope'     in dcm_data: pixelarray *= dcm_data.RescaleSlope 
-    if 'RescaleIntercept' in dcm_data: pixelarray += dcm_data.RescaleIntercept
+    if 'RescaleSlope' in dcm_data: 
+      pixelarray = pixelarray * dcm_data.RescaleSlope 
+    elif 'SharedFunctionalGroupsSequence' in dcm_data:
+      pixelarray = pixelarray * float(dcm_data.SharedFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleSlope)
+
+    if 'RescaleIntercept' in dcm_data: 
+      pixelarray = pixelarray +  dcm_data.RescaleIntercept
+    elif 'SharedFunctionalGroupsSequence' in dcm_data:
+      pixelarray = pixelarray + float(dcm_data.SharedFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleIntercept)
 
     self.sliceDistance = float(dcm_data.SliceThickness)
 
@@ -277,11 +293,20 @@ class DicomVolume:
     self.v0 /= np.sqrt((self.v0**2).sum()) 
     self.v0 *= self.sliceDistance 
 
-    self.offset = np.zeros(3)
-
+    ipp = None
     if 'DetectorInformationSequence' in dcm_data:
       if 'ImagePositionPatient' in dcm_data.DetectorInformationSequence[0]:
-        self.offset = np.array(dcm_data.DetectorInformationSequence[0].ImagePositionPatient, dtype = np.float)
+        ipp = dcm_data.DetectorInformationSequence[0].ImagePositionPatient
+        self.offset = np.array(ipp, dtype = np.float)
+    elif 'PerFrameFunctionalGroupsSequence':
+      if 'PlanePositionSequence' in dcm_data.PerFrameFunctionalGroupsSequence[0]:
+        # this is for molecubes dicom data
+        ipp = dcm_data.PerFrameFunctionalGroupsSequence[0].PlanePositionSequence[0].ImagePositionPatient
+        self.offset = np.array(ipp, dtype = np.float)
+
+    if ipp is None:
+      self.offset = np.zeros(3)
+      warnings.warn('Cannot find ImagePositionPatient in dicom header. Setting it to [0,0,0]')
 
     # reorient the patient volume to standard LPS orientation
     patvol = self.reorient_volume(pixelarray)
