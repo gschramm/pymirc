@@ -37,22 +37,45 @@ ct_vol_pet_grid = pymi.aff_transform(ct_vol, np.linalg.inv(ct_dcm.affine) @ pet_
                                      cval = -1024)
 
 # create a random affine tansformation
-params      = np.array([5.5,-7.5,4.5,0.2,-0.3,0.15])
+params      = np.array([5.5,-7.5,4.5,0.2,-0.15,0.15])
 origin      = np.array(pet_vol.shape)/2
 aff         = pymi.kul_aff(params, origin = origin)
 pet_shifted = pymi.aff_transform(pet_vol, aff, pet_vol.shape) 
 
+#---------------------------------------------------------------------------
+#---------------------------------------------------------------------------
 # rigidly align the shifted PET to CT by minimizing neg mutual information
-res = minimize(pymr.regis_cost_func, np.zeros(6), args = (ct_vol_pet_grid, pet_shifted, True), method = 'Powell', 
-               options = {'ftol':1e-2, 'xtol':1e-2, 'disp':True, 'maxiter':10, 'maxfev':500})
+# downsample the arrays by a factor for a fast pre-registration
+dsf                = 3
+pet_shifted_ds     = pymi.zoom3d(pet_shifted, 1./dsf)
+ct_vol_pet_grid_ds = pymi.zoom3d(ct_vol_pet_grid, 1./dsf)
 
-regis_aff = pymi.kul_aff(res.x, origin = origin)
+reg_params = np.zeros(6)
+
+# initial registration with downsampled arrays
+res = minimize(pymr.regis_cost_func, params, 
+               args = (ct_vol_pet_grid_ds, pet_shifted_ds, True), 
+               method = 'Powell', 
+               options = {'ftol':1e-3, 'xtol':1e-3, 'disp':True, 'maxiter':20, 'maxfev':5000})
+reg_params = res.x
+reg_params[:3] *= dsf
+
+# registration with full arrays
+res = minimize(pymr.regis_cost_func, params, 
+               args = (ct_vol_pet_grid, pet_shifted, True), 
+               method = 'Powell', 
+               options = {'ftol':1e-3, 'xtol':1e-3, 'disp':True, 'maxiter':20, 'maxfev':5000})
+reg_params = res.x
+
+#---------------------------------------------------------------------------
+#---------------------------------------------------------------------------
+regis_aff = pymi.kul_aff(reg_params, origin = origin)
 
 pet_coreg = pymi.aff_transform(pet_shifted, regis_aff, pet_vol.shape) 
 
-imshow_kwargs = [{'cmap':py.cm.Greys_r,'vmin':-1024,'vmax':5e2},
+imshow_kwargs = [{'cmap':py.cm.Greys_r,'vmin':-200, 'vmax':200},
                  {'cmap':py.cm.Greys,  'vmin':0,    'vmax':7e3},
                  {'cmap':py.cm.Greys,  'vmin':0,    'vmax':7e3}]
 
-vi = pymv.ThreeAxisViewer([ct_vol_pet_grid,pet_shifted, pet_coreg], 
+vi = pymv.ThreeAxisViewer([ct_vol_pet_grid, pet_coreg, pet_shifted], 
                           imshow_kwargs = imshow_kwargs, voxsize = pet_dcm.voxsize)

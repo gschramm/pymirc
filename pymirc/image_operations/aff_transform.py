@@ -132,9 +132,15 @@ def kul_aff(params, origin = None):
      containing the origin for the rotations (rotation center)
      The default None means origin = [0,0,0]
   """
-  t001 = params[3]
-  t100 = params[4]
-  t010 = params[5]
+  
+  if params.shape[0] > 3:
+    t001 = params[3]
+    t100 = params[4]
+    t010 = params[5]
+  else:
+    t001 = 0 
+    t100 = 0
+    t010 = 0
 
   # set up matrix for rotation around 001 axis
   P001 = np.zeros((3,3))
@@ -166,11 +172,10 @@ def kul_aff(params, origin = None):
     T[:-1,-1] -= origin
     R = np.linalg.inv(T) @ (R @ T)
   
-  if len(params) == 6:
-    TR = np.eye(4) 
-    TR[0,-1] = params[0]
-    TR[1,-1] = params[1]
-    TR[2,-1] = params[2]
-    R = R @ TR
+  TR = np.eye(4) 
+  TR[0,-1] = params[0]
+  TR[1,-1] = params[1]
+  TR[2,-1] = params[2]
+  R = R @ TR
   
   return R
