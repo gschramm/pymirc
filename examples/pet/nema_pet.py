@@ -7,7 +7,7 @@ import matplotlib.patches as patches
 
 import pymirc.registration     as pymr
 
-from .aff_transform import kul_aff, aff_transform
+from pymirc.image_operations import kul_aff, aff_transform
 
 from scipy.ndimage              import label, labeled_comprehension, find_objects, gaussian_filter, binary_erosion
 from scipy.ndimage.measurements import center_of_mass
@@ -426,10 +426,24 @@ def align_nema_2008_small_animal_iq_phantom(vol, voxsize, ftol = 1e-2, xtol = 1e
   phantom  = nema_2008_small_animal_iq_phantom(voxsize, vol.shape)
   phantom *= vol[vol>0.5*vol.max()].mean()
 
-  com_vol     = np.array(center_of_mass(vol))
-  com_phantom = np.array(center_of_mass(phantom))
+  reg_params = np.zeros(6)
 
-  res = minimize(pymr.regis_cost_func, np.concatenate((com_vol - com_phantom,np.zeros(3))), 
+  # registration of down sampled volumes
+  dsf    = 3
+  ds_aff = np.diag([dsf,dsf,dsf,1.])
+  
+  phantom_ds = aff_transform(phantom, ds_aff, np.ceil(np.array(phantom.shape)/dsf).astype(int))
+
+  res = minimize(pymr.regis_cost_func, reg_params, 
+                 args = (phantom_ds, vol, True, True, lambda x,y: ((x-y)**2).mean(), ds_aff), 
+                 method = 'Powell', 
+                 options = {'ftol':ftol, 'xtol':xtol, 'disp':True, 'maxiter':maxiter, 'maxfev':maxfev})
+
+  reg_params = res.x.copy()
+  # we have to scale the translations by the down sample factor since they are in voxels
+  reg_params[:3] *= dsf
+
+  res = minimize(pymr.regis_cost_func, reg_params, 
                  args = (phantom, vol, True, True, lambda x,y: ((x-y)**2).mean()), 
                  method = 'Powell', 
                  options = {'ftol':ftol, 'xtol':xtol, 'disp':True, 'maxiter':maxiter, 'maxfev':maxfev})
