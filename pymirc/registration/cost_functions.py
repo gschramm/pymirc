@@ -131,7 +131,7 @@ def neg_mutual_information(x, y, nbins = 40, norm = True):
 
 #---------------------------------------------------------------- 
 def regis_cost_func(params, img_fix, img_float, verbose = False,
-                    rotate = True, metric = neg_mutual_information, metric_kwargs = {}):
+                    rotate = True, metric = neg_mutual_information, pre_affine = None, metric_kwargs = {}):
   """Generic cost function for rigid registration
 
   Parameters
@@ -156,6 +156,12 @@ def regis_cost_func(params, img_fix, img_float, verbose = False,
   metric : function(img_fix, aff_transform(img_float, ...)) -> R, optional
     metric used to compare fixed and floating volume (default neg_mutual_information)
 
+  pre_affine : 2D 4x4 numpy array
+    affine transformation applied before doing the rotation and shifting
+
+  metric_kwargs : dictionary
+    key word arguments passed to the metric function
+
   Returns
   -------
   float
@@ -166,12 +172,16 @@ def regis_cost_func(params, img_fix, img_float, verbose = False,
   kul_aff()
   """
   if rotate:
-    af  = kul_aff(params, origin = np.array(img_float.shape)/2)
-    m   = metric(img_fix, aff_transform(img_float, af, img_float.shape), **metric_kwargs)
+    p = params.copy()
   else:
-    af = np.eye(4)
-    af[:-1,-1] = params
-    m  = metric(img_fix, aff_transform(img_float, af, img_float.shape), **metric_kwargs)
+    p = np.concatenate((params,np.zeros(3)))
+
+  if pre_affine is not None:
+    af  = pre_affine @ kul_aff(p, origin = np.array(img_fix.shape)/2)
+  else:
+    af  = kul_aff(params, origin = np.array(img_fix.shape)/2)
+
+  m = metric(img_fix, aff_transform(img_float, af, img_fix.shape, cval = img_float.min()), **metric_kwargs)
 
   if verbose:
     print(params)

@@ -133,7 +133,7 @@ def kul_aff(params, origin = None):
      The default None means origin = [0,0,0]
   """
   
-  if params.shape[0] > 3:
+  if len(params) > 3:
     t001 = params[3]
     t100 = params[4]
     t010 = params[5]
