@@ -1,9 +1,4 @@
-try: 
-  from dicom.dataset import Dataset
-except ImportError:
-  from pydicom.dataset import Dataset
-
-from pdb import set_trace
+from pydicom.dataset import Dataset
 
 import warnings
 

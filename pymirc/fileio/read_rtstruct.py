@@ -4,7 +4,6 @@ import pylab as py
 
 from scipy.spatial      import ConvexHull
 from matplotlib.patches import Polygon 
-#import shapely.geometry as shg
 
 #---------------------------------------------------------------------
 def contour_orientation(c):
