@@ -22,7 +22,8 @@ aff[1,-1] = (-1 * aff_ras @ np.array([0,roi_vol.shape[1]-1,0,1]))[1]
 ct_files    = glob('../../data/TestRTstruct/CT/*.dcm')
 ct_dcm      = pymf.DicomVolume(ct_files)
 ct          = ct_dcm.get_data()
-refdcm_file = ct_files[0]
+refdcm_file = ct_files
 
 #------------------------------------------------------------
-pymf.labelvol_to_rtstruct(roi_vol, aff, refdcm_file, '../../data/TestRTstruct/t_rtstruct.dcm')
+pymf.labelvol_to_rtstruct(roi_vol, aff, refdcm_file, '../../data/TestRTstruct/t_rtstruct.dcm',
+                          tags_to_add = {'SpecificCharacterSet':'ISO_IR 192'})

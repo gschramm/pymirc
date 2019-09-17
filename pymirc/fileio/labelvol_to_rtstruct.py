@@ -23,7 +23,8 @@ def labelvol_to_rtstruct(roi_vol,
                                             ['255','0','255'],['255','255','0'],['0','255','255']],
                          tags_to_copy      = ['PatientName','PatientID','AccessionNumber','StudyID',
                                               'StudyDescription','StudyDate','StudyTime',
-                                              'SeriesDate','SeriesTime']):
+                                              'SeriesDate','SeriesTime'],
+                         tags_to_add       = None):
 
   """Convert a 3D array with integer ROI label to RTstruct
 
@@ -40,9 +41,12 @@ def labelvol_to_rtstruct(roi_vol,
   aff : 2d 4x4 numpy array
     affine matrix that maps from voxel to (LPS) world coordinates
   
-  refdcm_file : string
-    a single reference dicom file
-    from this file several dicom tags are copied (e.g. the FrameOfReferenceUID)
+  refdcm_file : string or list
+    A single reference dicom file or a list of reference files (multiple CT slices)
+    From this file several dicom tags are copied (e.g. the FrameOfReferenceUID).
+    In case a list of files is given, the dicom tags are copied from the first file,
+    however all SOPInstanceUIDs are added to the ContourImageSequence (needed for some
+    RT systems)
 
   filename : string
     name of the output rtstruct file
@@ -68,13 +72,19 @@ def labelvol_to_rtstruct(roi_vol,
 
   tags_to_copy: list of strings, list optional
     extra dicom tags to copy from the refereced dicom file
+
+  tags_to_add: dictionary
+    with valid dicom tags to add in the header
   """
 
   roinumbers = np.unique(roi_vol)
   roinumbers = roinumbers[roinumbers > 0]
   nrois  = len(roinumbers)
 
-  refdcm = pydicom.read_file(refdcm_file) 
+  if isinstance(refdcm_file, list):
+    refdcm = pydicom.read_file(refdcm_file[0]) 
+  else:
+    refdcm = pydicom.read_file(refdcm_file) 
  
   file_meta = pydicom.Dataset()
   
@@ -108,18 +118,35 @@ def labelvol_to_rtstruct(roi_vol,
   dfr.FrameOfReferenceUID = refdcm.FrameOfReferenceUID
   
   ds.ReferencedFrameOfReferenceSequence = pydicom.Sequence([dfr])
-  
+
+  if tags_to_add is not None: 
+    for tag, value in tags_to_add.items():
+      setattr(ds, tag, value)
+ 
   #######################################################################
   #######################################################################
   # write the ReferencedFrameOfReferenceSequence
-  
-  tmp = pydicom.Dataset()
-  tmp.ReferencedSOPClassUID    = refdcm.SOPClassUID
-  tmp.ReferencedSOPInstanceUID = refdcm.SOPInstanceUID
+ 
+  contourImageSeq = pydicom.Sequence()
+
+  if isinstance(refdcm_file, list):
+    # in case we got all reference dicom files we add all SOPInstanceUIDs
+    # otherwise some RT planning systems refuse to read the RTstructs
+    for fname in refdcm_file:
+      with pydicom.read_file(fname) as tmpdcm:
+        tmp = pydicom.Dataset()
+        tmp.ReferencedSOPClassUID    = tmpdcm.SOPClassUID
+        tmp.ReferencedSOPInstanceUID = tmpdcm.SOPInstanceUID
+        contourImageSeq.append(tmp) 
+  else: 
+    tmp = pydicom.Dataset()
+    tmp.ReferencedSOPClassUID    = refdcm.SOPClassUID
+    tmp.ReferencedSOPInstanceUID = refdcm.SOPInstanceUID
+    contourImageSeq.append(tmp) 
   
   tmp2 = pydicom.Dataset()
   tmp2.SeriesInstanceUID    = refdcm.SeriesInstanceUID
-  tmp2.ContourImageSequence = pydicom.Sequence([tmp])
+  tmp2.ContourImageSequence = contourImageSeq
   
   tmp3 = pydicom.Dataset()
   tmp3.ReferencedSOPClassUID    = '1.2.840.10008.3.1.2.3.1' 
