@@ -56,6 +56,9 @@ print('ROI # voxel..:', [len(ct_vol[x])   for x in roi_inds])
 
 #---------------------------------------------------------------------------
 # view the results
-imshow_kwargs = [{'cmap':py.cm.Greys_r,'vmin':-500,'vmax':500},
-                 {'cmap':py.cm.nipy_spectral,'vmin':0,'vmax':len(roi_inds)}]
-vi = pymv.ThreeAxisViewer([ct_vol,roi_vol], voxsize=ct_dcm.voxsize, imshow_kwargs = imshow_kwargs)
+imshow_kwargs   = {'cmap':py.cm.Greys_r,'vmin':-500,'vmax':500}
+oimshow_kwargs =  {'cmap':py.cm.nipy_spectral, 'alpha':0.3, 'vmax': 1.2*roi_vol.max()}
+vi = pymv.ThreeAxisViewer([ct_vol,ct_vol], ovols = [None,roi_vol], voxsize = ct_dcm.voxsize, 
+                          imshow_kwargs = imshow_kwargs, oimshow_kwargs = oimshow_kwargs)
+
+print('\nPress "a" to hide/show overlay')

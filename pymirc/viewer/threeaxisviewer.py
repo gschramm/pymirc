@@ -37,16 +37,19 @@ class ThreeAxisViewer:
   vi = ThreeAxisViewer([np.random.randn(90,90,80),np.random.randn(90,90,80)], imshow_kwargs = ims_kwargs)
   """
   def __init__(self, vols, 
-                     voxsize       = [1.,1.,1.], 
-                     width         = None, 
-                     sl_x          = None, 
-                     sl_y          = None, 
-                     sl_z          = None, 
-                     sl_t          = 0, 
-                     ls            = ':',
-                     rowlabels     = None,
-                     imshow_kwargs = {}):
+                     ovols          = None,
+                     voxsize        = [1.,1.,1.], 
+                     width          = None, 
+                     sl_x           = None, 
+                     sl_y           = None, 
+                     sl_z           = None, 
+                     sl_t           = 0, 
+                     ls             = ':',
+                     rowlabels      = None,
+                     imshow_kwargs  = {},
+                     oimshow_kwargs = {}):
 
+    # image volumes
     if not isinstance(vols,list): 
       self.vols = [vols]
     else:
@@ -54,6 +57,18 @@ class ThreeAxisViewer:
 
     self.n_vols = len(self.vols)
     self.ndim   = self.vols[0].ndim
+
+    # overlay volumes
+    if ovols is None:
+      self.ovols = None
+    else:
+      if not isinstance(ovols,list): 
+        self.ovols = [ovols]
+      else:
+        self.ovols = ovols
+
+    # factor used to hide / show overlays
+    self.ofac = 1 
 
     if self.ndim: self.nframes = self.vols[0].shape[0]
     else:         self.nframes = 1 
@@ -93,8 +108,9 @@ class ThreeAxisViewer:
     else:
       self.fstr = ''
 
+    # kwargs for real volumes
     self.imshow_kwargs = imshow_kwargs
-    
+
     if not isinstance(self.imshow_kwargs,list): 
       tmp = self.imshow_kwargs.copy()
       self.imshow_kwargs = []
@@ -109,7 +125,29 @@ class ThreeAxisViewer:
         self.imshow_kwargs[i]['vmin'] = self.vols[i].min()
       if not 'vmax'          in self.imshow_kwargs[i]: 
         self.imshow_kwargs[i]['vmax'] = self.vols[i].max()
-      
+    
+    # overlay imshow kwargs  
+   
+    self.oimshow_kwargs = oimshow_kwargs
+    if not isinstance(self.oimshow_kwargs,list): 
+      tmp = self.oimshow_kwargs.copy()
+      self.oimshow_kwargs = []
+      for i in range(self.n_vols): self.oimshow_kwargs.append(tmp.copy())
+
+    for i in range(self.n_vols):
+      if not 'cmap' in self.oimshow_kwargs[i]:          
+        self.oimshow_kwargs[i]['cmap'] = py.cm.hot
+      if not 'alpha' in self.oimshow_kwargs[i]:          
+        self.oimshow_kwargs[i]['alpha'] = 0.5
+        if not 'interpolation' in self.oimshow_kwargs[i]: 
+          self.oimshow_kwargs[i]['interpolation'] = 'nearest'
+      if self.ovols is not None:
+        if self.ovols[i] is not None:
+          if not 'vmin'          in self.oimshow_kwargs[i]: 
+            self.oimshow_kwargs[i]['vmin'] = self.ovols[i].min()
+          if not 'vmax'          in self.oimshow_kwargs[i]: 
+            self.oimshow_kwargs[i]['vmax'] = self.ovols[i].max()
+
     # generat the slice objects sl0, sl2, sl2
     self.recalculate_slices()
    
@@ -121,7 +159,8 @@ class ThreeAxisViewer:
     self.fig, self.ax = py.subplots(self.n_vols, 3, figsize = (width,width*fig_asp), squeeze = False)
     self.axes         = self.fig.get_axes()
 
-    self.imgs = []
+    self.imgs  = []
+    self.oimgs = None
 
     for i in range(self.n_vols):
       im0 = np.squeeze(self.vols[i][tuple(self.sl0)].T)
@@ -138,7 +177,26 @@ class ThreeAxisViewer:
       self.ax[i,0].set_axis_off()
       self.ax[i,1].set_axis_off()    
       self.ax[i,2].set_axis_off()
-    
+   
+    # add the overlay images in case given
+    if self.ovols is not None:
+      self.oimgs = []
+      for i in range(self.n_vols):
+        if self.ovols[i] is not None:
+          oim0    = np.squeeze(self.ovols[i][tuple(self.sl0)].T)
+          oim1    = np.squeeze(np.flip(self.ovols[i][tuple(self.sl1)].T,0))
+          oim2    = np.squeeze(np.flip(self.ovols[i][tuple(self.sl2)].T,0))
+ 
+          tmp  = []
+          tmp.append(self.ax[i,0].imshow(oim0, aspect=voxsize[1]/voxsize[0], **self.oimshow_kwargs[i]))
+          tmp.append(self.ax[i,1].imshow(oim1, aspect=voxsize[2]/voxsize[0], **self.oimshow_kwargs[i]))
+          tmp.append(self.ax[i,2].imshow(oim2, aspect=voxsize[2]/voxsize[1], **self.oimshow_kwargs[i]))
+
+          self.oimgs.append(tmp)
+        else:
+          self.oimgs.append(None)
+
+ 
     self.ax[0,0].set_title(str(self.sl_z) + self.fstr, fontsize='small') 
     self.ax[0,1].set_title(str(self.sl_y) + self.fstr, fontsize='small') 
     self.ax[0,2].set_title(str(self.sl_x) + self.fstr, fontsize='small') 
@@ -244,6 +302,9 @@ class ThreeAxisViewer:
   def redraw_transversal(self):
     for i in range(self.n_vols):
       self.imgs[i][0].set_data(np.squeeze(self.vols[i][tuple(self.sl0)].T))
+      if (self.oimgs is not None) and (self.oimgs[i] is not None):
+        self.oimgs[i][0].set_data(self.ofac*np.squeeze(self.ovols[i][tuple(self.sl0)].T))
+
     self.ax[0,0].set_title(str(self.sl_z) + self.fstr,fontsize='small') 
     if self.showCross:
         for l in self.l0x: l.set_xdata(self.sl_x) 
@@ -252,8 +313,11 @@ class ThreeAxisViewer:
 
   #------------------------------------------------------------------------
   def redraw_coronal(self):
+    
     for i in range(self.n_vols):
       self.imgs[i][1].set_data(np.squeeze(np.flip(self.vols[i][tuple(self.sl1)].T,0)))
+      if (self.oimgs is not None) and (self.oimgs[i] is not None):
+        self.oimgs[i][1].set_data(self.ofac*np.squeeze(np.flip(self.ovols[i][tuple(self.sl1)].T,0)))
     self.ax[0,1].set_title(str(self.sl_y) + self.fstr,fontsize='small') 
     if self.showCross:
         for l in self.l1x: l.set_xdata(self.sl_x) 
@@ -264,6 +328,9 @@ class ThreeAxisViewer:
   def redraw_sagittal(self):
     for i in range(self.n_vols):
       self.imgs[i][2].set_data(np.squeeze(np.flip(self.vols[i][tuple(self.sl2)].T,0)))
+      if (self.oimgs is not None) and (self.oimgs[i] is not None):
+        self.oimgs[i][2].set_data(self.ofac*np.squeeze(np.flip(self.ovols[i][tuple(self.sl2)].T,0)))
+
     self.ax[0,2].set_title(str(self.sl_x) + self.fstr,fontsize='small') 
     if self.showCross:
         for l in self.l2x: l.set_xdata(self.sl_y) 
@@ -356,6 +423,9 @@ class ThreeAxisViewer:
 
             self.recalculate_slices()
             self.redraw()
+    elif event.key == 'a':
+      self.ofac = 1 - self.ofac 
+      self.redraw()
 
   #------------------------------------------------------------------------
   def onbuttonpress(self,event):

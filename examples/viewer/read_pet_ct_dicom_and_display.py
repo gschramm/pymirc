@@ -32,7 +32,15 @@ ct_vol  = ct_dcm.get_data()
 pet_vol_ct_grid = pymi.aff_transform(pet_vol, np.linalg.inv(pet_dcm.affine) @ ct_dcm.affine, 
                                      output_shape = ct_vol.shape)
 
-imshow_kwargs = [{'cmap':py.cm.Greys},{'cmap':py.cm.Greys_r,'vmin':-1024,'vmax':500}]
+imshow_kwargs = [{'cmap':py.cm.Greys},
+                 {'cmap':py.cm.Greys_r,'vmin':-500,'vmax':500},
+                 {'cmap':py.cm.Greys_r,'vmin':-500,'vmax':500}]
 
-vi = pymv.ThreeAxisViewer([pet_vol_ct_grid,ct_vol], voxsize = ct_dcm.voxsize, 
-                          imshow_kwargs = imshow_kwargs)
+oimshow_kwargs = {'cmap':py.cm.hot, 'alpha':0.3}
+
+print('\nPress "a" to hide/show overlay')
+
+vi = pymv.ThreeAxisViewer([pet_vol_ct_grid,ct_vol,ct_vol], 
+                          ovols = [None, None, pet_vol_ct_grid],
+                          voxsize = ct_dcm.voxsize, imshow_kwargs = imshow_kwargs,
+                          oimshow_kwargs = oimshow_kwargs)
