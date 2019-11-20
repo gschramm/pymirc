@@ -44,8 +44,12 @@ class DicomVolume:
         # this is for multi slice data of the Siemens symbia spect
         iop =  self.firstdcmheader.DetectorInformationSequence[0].ImageOrientationPatient
       else:
-        # this is for multi slice data of molecubes
-        iop = self.firstdcmheader.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
+        try:
+          # this is for multi slice data of molecubes
+          iop = self.firstdcmheader.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
+        except AttributeError:
+          # this is for multi slice data from PMOD
+          iop = self.firstdcmheader.PerFrameFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
 
       self.x = np.array(iop[:3], dtype = np.float) 
       self.y = np.array(iop[3:], dtype = np.float) 
@@ -269,15 +273,30 @@ class DicomVolume:
     if 'RescaleSlope' in dcm_data: 
       pixelarray = pixelarray * dcm_data.RescaleSlope 
     elif 'SharedFunctionalGroupsSequence' in dcm_data:
-      pixelarray = pixelarray * float(dcm_data.SharedFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleSlope)
+      try:
+        # molecubes multi slice data
+        pixelarray = pixelarray * float(dcm_data.SharedFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleSlope)
+      except AttributeError:
+        # pmod multi slice data 
+        pixelarray = pixelarray * float(dcm_data.PerFrameFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleSlope)
+   
 
     if 'RescaleIntercept' in dcm_data: 
       pixelarray = pixelarray +  dcm_data.RescaleIntercept
     elif 'SharedFunctionalGroupsSequence' in dcm_data:
-      pixelarray = pixelarray + float(dcm_data.SharedFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleIntercept)
+      try:
+        # molecubes multi slice data
+        pixelarray = pixelarray + float(dcm_data.SharedFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleIntercept)
+      except AttributeError:
+        # pmod multi slice data 
+        pixelarray = pixelarray + float(dcm_data.PerFrameFunctionalGroupsSequence[0].PixelValueTransformationSequence[0].RescaleIntercept)
 
-    self.sliceDistance = float(dcm_data.SliceThickness)
-
+    if 'SliceThickness' in dcm_data:
+      self.sliceDistance = float(dcm_data.SliceThickness)
+    else:
+      # PMOD multi slice data
+      self.sliceDistance = float(dcm_data.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].SliceThickness)
+     
     self.n0, self.n1, self.n2 = pixelarray.shape
 
     # generate the directional vectors and the offset
