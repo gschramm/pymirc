@@ -5,3 +5,5 @@ from .zoom3d                      import zoom3d, downsample_3d_0, downsample_3d_
 from .zoom3d                      import upsample_3d_0, upsample_3d_1, upsample_3d_2
 from .binary_2d_image_to_contours import binary_2d_image_to_contours
 from .mincostpath                 import mincostpath
+from .resample_img_cont           import resample_img_cont
+from .resample_cont_cont          import resample_cont_cont
