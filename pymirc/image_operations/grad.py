@@ -263,7 +263,17 @@ def complex_div(g):
   """
 
   ndim = g.shape[0] // 2
-  if   ndim == 2: return div2d(g[:ndim,...]) + div2d(g[ndim:,...])*1j
-  if   ndim == 3: return div3d(g[:ndim,...]) + div3d(g[ndim:,...])*1j
-  if   ndim == 4: return div4d(g[:ndim,...]) + div4d(g[ndim:,...])*1j
-  else          : raise TypeError('Invalid dimension of input') 
+  tmp  = numpy.zeros(g.shape[1:], dtype = numpy.complex)
+
+  if ndim == 2: 
+    tmp.real = div2d(g[:ndim,...])
+    tmp.imag = div2d(g[ndim:,...])
+  elif ndim == 3: 
+    tmp.real = div3d(g[:ndim,...])
+    tmp.imag = div3d(g[ndim:,...])
+  elif ndim == 4: 
+    tmp.real = div4d(g[:ndim,...])
+    tmp.imag = div4d(g[ndim:,...])
+  else: raise TypeError('Invalid dimension of input') 
+
+  return tmp

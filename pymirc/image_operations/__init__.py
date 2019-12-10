@@ -7,3 +7,4 @@ from .binary_2d_image_to_contours import binary_2d_image_to_contours
 from .mincostpath                 import mincostpath
 from .resample_img_cont           import resample_img_cont
 from .resample_cont_cont          import resample_cont_cont
+from .grad                        import grad, div, complex_grad, complex_div
