@@ -141,8 +141,12 @@ def complex_grad(x,g):
   Arguments
   ---------
   
-  x ... a 2d, 3d, or 4d numpy array
-  g ... (output) array of size ((2*x.ndim,), x.shape) used to store the ouput
+  x ... a complex numpy arrays represented by 2 float arrays
+        2D ... x.shape = [n0,n1,2]
+        3D ... x.shape = [n0,n1,n2,2]
+        4D ... x.shape = [n0,n1,n2,n3,2]
+
+  g ... (output) array of size ((2*x[...,0].ndim,), x[...,0].shape) used to store the ouput
 
   Note
   ----
@@ -153,16 +157,16 @@ def complex_grad(x,g):
   concatenated together.
 
   """
-  ndim = x.ndim
+  ndim = x[...,0].ndim
   if   ndim == 2: 
-    grad2d(x.real, g[:ndim,...])
-    grad2d(x.imag, g[ndim:,...])
+    grad2d(x[...,0], g[:ndim,...])
+    grad2d(x[...,1], g[ndim:,...])
   elif ndim == 3: 
-    grad3d(x.real, g[:ndim,...])
-    grad3d(x.imag, g[ndim:,...])
+    grad3d(x[...,0], g[:ndim,...])
+    grad3d(x[...,1], g[ndim:,...])
   elif ndim == 4: 
-    grad4d(x.real, g[:ndim,...])
-    grad4d(x.imag, g[ndim:,...])
+    grad4d(x[...,0], g[:ndim,...])
+    grad4d(x[...,1], g[ndim:,...])
   else          : raise TypeError('Invalid dimension of input') 
 
 #-----------------------------------------------------------------------------
@@ -248,7 +252,7 @@ def complex_div(g):
   Returns
   -------
 
-  a complex array of size g.shape[1:]
+  a real array of shape (g.shape[1:] + (2,)) representing the complex array by 2 real arrays
 
   Note
   ----
@@ -263,17 +267,17 @@ def complex_div(g):
   """
 
   ndim = g.shape[0] // 2
-  tmp  = numpy.zeros(g.shape[1:], dtype = numpy.complex)
+  tmp  = numpy.zeros(g.shape[1:] + (2,))
 
   if ndim == 2: 
-    tmp.real = div2d(g[:ndim,...])
-    tmp.imag = div2d(g[ndim:,...])
+    tmp[...,0] = div2d(g[:ndim,...])
+    tmp[...,1] = div2d(g[ndim:,...])
   elif ndim == 3: 
-    tmp.real = div3d(g[:ndim,...])
-    tmp.imag = div3d(g[ndim:,...])
+    tmp[...,0] = div3d(g[:ndim,...])
+    tmp[...,1] = div3d(g[ndim:,...])
   elif ndim == 4: 
-    tmp.real = div4d(g[:ndim,...])
-    tmp.imag = div4d(g[ndim:,...])
+    tmp[...,0] = div4d(g[:ndim,...])
+    tmp[...,1] = div4d(g[ndim:,...])
   else: raise TypeError('Invalid dimension of input') 
 
   return tmp
