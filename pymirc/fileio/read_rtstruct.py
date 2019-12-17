@@ -116,7 +116,11 @@ def read_rtstruct_contour_data(rtstruct_file,
 
 #----------------------------------------------------------------------------------------------------
 
-def convert_contour_data_to_roi_indices(contour_data, aff, shape, radius = None):
+def convert_contour_data_to_roi_indices(contour_data, 
+                                        aff, 
+                                        shape, 
+                                        radius = None, 
+                                        use_contour_orientation = True):
   """Convert RTSTRUCT 2D polygon contour data to 3D indices
 
   Parameters
@@ -134,6 +138,11 @@ def convert_contour_data_to_roi_indices(contour_data, aff, shape, radius = None)
   radius : float, optional
     passed to matplotlib.patches.Polygon.contains_point()
   
+  use_contour_orientation: bool
+    whether to use the orientation of a contour (clockwise vs counter clockwise)
+    to determine whether a contour defines a ROI or a holes "within" an ROI.
+    This approach is used by some vendors to store "holes" in 2D slices of 3D segmentations.
+
   Returns
   -------
   list
@@ -195,10 +204,13 @@ def convert_contour_data_to_roi_indices(contour_data, aff, shape, radius = None)
           for i in np.arange(i_min[0], i_min[0] + n_test[0]):
             for j in np.arange(i_min[1], i_min[1] + n_test[1]):
               if poly.contains_point((aff @ np.array([i,j,sl,1]))[:2], radius = radius):
-                if contour_orientation:
-                  bin_img[i,j] += 1
+                if use_contour_orientation:
+                  if contour_orientation:
+                    bin_img[i,j] += 1
+                  else:
+                    bin_img[i,j] -= 1
                 else:
-                  bin_img[i,j] -= 1
+                  bin_img[i,j] += 1
         inds0, inds1 = np.where(bin_img > 0)
         inds2 = np.repeat(sl,len(inds0))
 
