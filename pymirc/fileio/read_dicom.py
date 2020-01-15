@@ -40,6 +40,9 @@ class DicomVolume:
 
     if 'NumberOfFrames' in self.firstdcmheader:
       # case of multi slice data (3d array in 1 dicom file
+      # getting the ImageOrientationPatient attribute is not trivial
+      # since it is stored in different tags by different vendors
+
       if 'DetectorInformationSequence' in self.firstdcmheader:     
         # this is for multi slice data of the Siemens symbia spect
         iop =  self.firstdcmheader.DetectorInformationSequence[0].ImageOrientationPatient
@@ -49,7 +52,11 @@ class DicomVolume:
           iop = self.firstdcmheader.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
         except AttributeError:
           # this is for multi slice data from PMOD
-          iop = self.firstdcmheader.PerFrameFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
+          try:
+            iop = self.firstdcmheader.PerFrameFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient
+          except AttributeError:
+            # this is for multi slice data from RayStation
+            iop = self.firstdcmheader.ImageOrientationPatient
 
       self.x = np.array(iop[:3], dtype = np.float) 
       self.y = np.array(iop[3:], dtype = np.float) 
@@ -313,15 +320,20 @@ class DicomVolume:
     self.v0 *= self.sliceDistance 
 
     ipp = None
+
     if 'DetectorInformationSequence' in dcm_data:
       if 'ImagePositionPatient' in dcm_data.DetectorInformationSequence[0]:
         ipp = dcm_data.DetectorInformationSequence[0].ImagePositionPatient
         self.offset = np.array(ipp, dtype = np.float)
-    elif 'PerFrameFunctionalGroupsSequence':
+    elif 'PerFrameFunctionalGroupsSequence' in dcm_data:
       if 'PlanePositionSequence' in dcm_data.PerFrameFunctionalGroupsSequence[0]:
         # this is for molecubes dicom data
         ipp = dcm_data.PerFrameFunctionalGroupsSequence[0].PlanePositionSequence[0].ImagePositionPatient
         self.offset = np.array(ipp, dtype = np.float)
+    elif 'ImagePositionPatient' in dcm_data:
+      # this is for RayStation dicom data
+      ipp = dcm_data.ImagePositionPatient
+      self.offset = np.array(ipp, dtype = np.float)
 
     if ipp is None:
       self.offset = np.zeros(3)
