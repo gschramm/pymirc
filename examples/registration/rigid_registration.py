@@ -10,7 +10,7 @@ if not pymirc_path in sys.path: sys.path.append(pymirc_path)
 import pymirc.viewer           as pymv
 import pymirc.fileio           as pymf
 import pymirc.image_operations as pymi
-import pymirc.registration     as pymr
+import pymirc.metrics.cost_functions as pymr
 
 #---------------------------------------------------------------------------------------------
 
@@ -79,7 +79,9 @@ af  = pre_affine @ pymi.kul_aff(reg_params, origin = np.array(ct_vol_rot.shape)/
 pet_coreg = pymi.aff_transform(pet_vol, af, ct_vol_rot.shape, cval = pet_vol.min())
 
 imshow_kwargs = [{'cmap':py.cm.Greys_r, 'vmin': -200, 'vmax' : 200},
+                 {'cmap':py.cm.Greys_r, 'vmin': -200, 'vmax' : 200},
                  {'cmap':py.cm.Greys, 'vmin':0, 'vmax':np.percentile(pet_coreg,99.9)}]
 
-vi = pymv.ThreeAxisViewer([ct_vol_rot, pet_coreg], imshow_kwargs = imshow_kwargs, 
+vi = pymv.ThreeAxisViewer([ct_vol_rot, ct_vol_rot, pet_coreg], ovols = [None, pet_coreg, None],
+                          imshow_kwargs = imshow_kwargs, 
                            voxsize = ct_dcm.voxsize, width = 6)
