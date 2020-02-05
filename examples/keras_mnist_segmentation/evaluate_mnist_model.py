@@ -1,5 +1,5 @@
 from tensorflow import keras
-from loss_functions import dice_loss
+from pymirc.metrics.tf_losses import dice
 import numpy as np
 
 import matplotlib as mpl
@@ -12,7 +12,7 @@ import matplotlib.pyplot as py
 #-----------------------------------------------------------
 def evaluate_mnist_model(fname, x_val, y_val, val_labels): 
 
-  model = keras.models.load_model(fname, custom_objects = {'dice_loss': dice_loss})
+  model = keras.models.load_model(fname, custom_objects = {'dice': dice})
   
   # Generate predictions (probabilities -- the output of the last layer)
   # on new data using `predict`
@@ -27,8 +27,8 @@ def evaluate_mnist_model(fname, x_val, y_val, val_labels):
   
   for i in range(10):
     inds = np.where(val_labels == i)
-    d1 = dice_loss(predictions[inds],y_val[inds]).numpy()
-    d2 = dice_loss(predictions2[inds],np.swapaxes(y_val[inds],1,2)).numpy()
+    d1 = dice(predictions[inds],y_val[inds]).numpy()
+    d2 = dice(predictions2[inds],np.swapaxes(y_val[inds],1,2)).numpy()
     val_dice[i]       = 1 - d1.mean() 
     val_dice2[i]      = 1 - d2.mean() 
     val_dice_std[i]   = d1.std() 

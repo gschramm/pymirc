@@ -1,6 +1,9 @@
 import numpy as np
-from keras import backend as K
 import tensorflow as tf
+if tf.__version__.startswith('1.'):
+  from keras import backend as K
+else:
+  from tensorflow.keras import backend as K
 
 
 def dice_coef(y_true, y_pred):

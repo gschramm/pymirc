@@ -3,8 +3,8 @@
 This should install a conda env "tf" with tensorflow >= 2.0
 which comes with keras integrated.
 
-(CPU) conda create -n tf tensorflow scipy matplotlib ipython
-(GPU) conda create -n tf tensorflow-gpu scipy matplotlib ipython  
+(CPU) conda create -n tf tensorflow scipy matplotlib ipython numba scikit-image
+(GPU) conda create -n tf tensorflow-gpu scipy matplotlib ipython numba scikit-image
 
 # run the mnist segmentation toy problem 
 

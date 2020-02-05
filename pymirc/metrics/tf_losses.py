@@ -1,6 +1,10 @@
-from keras import backend as K
+import tensorflow as tf
+if tf.__version__.startswith('1.'):
+  from keras import backend as K
+else:
+  from tensorflow.keras import backend as K
 
-from utils.metrics import soft_dice_coef, soft_jaccard_index, IoU
+from .tf_metrics import soft_dice_coef, soft_jaccard_index, IoU
 
 
 def weighted_binary_crossentropy(weights=[.5, 1]):
@@ -21,7 +25,7 @@ def weighted_binary_crossentropy(weights=[.5, 1]):
 
 def dice(y_true, y_pred):
     '''
-    Equal to 1 minus the soft dice coefficient defined in utils.metrics
+    Equal to 1 minus the soft dice coefficient defined in metrics
     '''
     return 1 - soft_dice_coef(y_true, y_pred)
 
@@ -32,12 +36,12 @@ def binary_crossentropy(y_true, y_pred):
 
 
 def jaccard(y_true, y_pred):
-    '''Equal to 1 minus the jaccard index defined in utils.metrics'''
+    '''Equal to 1 minus the jaccard index defined in metrics'''
     return 1 - soft_jaccard_index(y_true, y_pred)
 
 
 def IoU_loss(y_true, y_pred):
-    '''Equal to 1 minus the intersection over union defined in utils.metrics'''
+    '''Equal to 1 minus the intersection over union defined in metrics'''
     return 1 - IoU(y_true, y_pred)
 
 

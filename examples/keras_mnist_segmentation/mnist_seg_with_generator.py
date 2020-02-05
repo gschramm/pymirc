@@ -20,7 +20,7 @@ from mnist_generator import  MNISTSequence
 from callbacks import MNISTCallback
 from create_data import create_mnist_seg_data
 from evaluate_mnist_model import evaluate_mnist_model
-from loss_functions import dice_loss
+from pymirc.metrics.tf_losses import dice
 
 import os
 import h5py
@@ -105,7 +105,7 @@ mnist_train_gen  =  MNISTSequence(x_train, y_train, batch_size, rotation_range_d
 #---------------------------------------------------------------------------------------------
 
 if loss_fct == 'dice':
-  loss = dice_loss
+  loss = dice
 elif loss_fct == 'bce':
   loss = keras.losses.BinaryCrossentropy()
 
