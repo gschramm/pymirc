@@ -132,8 +132,7 @@ history = model.fit(mnist_train_gen,
                     epochs              = epochs,
                     validation_data     = (x_val, y_val),
                     callbacks           = [reduce_lr, MNISTCallback(), mc],
-                    shuffle             = False,
-                    use_multiprocessing = True)
+                    shuffle             = False)
 
 # The returned "history" object holds a record
 # of the loss values and metric values during training
