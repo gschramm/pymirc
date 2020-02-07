@@ -14,6 +14,8 @@ parser.add_argument('--no_batch_norm', action = 'store_false', dest = 'batch_nor
 
 args = parser.parse_args()
 
+import sys, os
+sys.path.append(os.path.abspath('../..'))
 from tensorflow import keras
 from unet       import unet
 from mnist_generator import  MNISTSequence
@@ -84,7 +86,7 @@ for i in range(x_train.shape[0]):
   isignal = -np.percentile(-x_train[i,...],0.05)
   x_train[i,...] /= isignal
 
-#---------------------------------------------------------  
+#---------------------------------------------------------
 # Reserve samples for validation
 x_val = x_train[-nval:].astype(np.float32)
 y_val = y_train[-nval:].astype(np.float32)
@@ -111,22 +113,22 @@ elif loss_fct == 'bce':
 
 model = unet(input_shape = input_shape, nfeat = nfeat, batch_normalization = bn)
 
-model.compile(optimizer = keras.optimizers.Adam(learning_rate = learning_rate), 
+model.compile(optimizer = keras.optimizers.Adam(learning_rate = learning_rate),
               loss      = loss)
 
 #-----------------------------------------------------------------
 # train the model
 
 # define a callback that reduces the learning rate
-reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor  = 'val_loss', 
-                                              factor   = lr_reduce_fac, 
-                                              patience = lr_patience, 
+reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor  = 'val_loss',
+                                              factor   = lr_reduce_fac,
+                                              patience = lr_patience,
                                               min_lr   = min_lr)
 
-mc = keras.callbacks.ModelCheckpoint(oname, monitor='val_loss', mode='min', 
+mc = keras.callbacks.ModelCheckpoint(oname, monitor='val_loss', mode='min',
                                      save_best_only=True, verbose = 1)
 
-history = model.fit(mnist_train_gen, 
+history = model.fit(mnist_train_gen,
                     epochs              = epochs,
                     validation_data     = (x_val, y_val),
                     callbacks           = [reduce_lr, MNISTCallback(), mc],
