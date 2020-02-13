@@ -5,7 +5,7 @@ import numpy as np
 import pylab as py
 import matplotlib.patches as patches
 
-import pymirc.registration     as pymr
+import pymirc.metrics     as pymr
 
 from pymirc.image_operations import kul_aff, aff_transform
 
@@ -1210,7 +1210,7 @@ def fit_WB_NEMA_sphere_profiles(vol,
     bgCOVs  = np.array([x.bgcov  for x in fitres])
 
     retvals = {'fitres':fitres, 'fwhms':fwhms, 'Rs':Rs, 'Bs': Bs, 'Ss':Ss, 'a50RCs':a50RCs,
-               'meanRCs':meanRCs, 'maxRCs':maxRCs, 'bgCOVs':bgCOVs, 'subvols':subvols}
+               'meanRCs':meanRCs, 'maxRCs':maxRCs, 'bgCOVs':bgCOVs, 'subvols':subvols, 'vol':vol}
 
     if showprofiles: 
         retvals['fig']  = fig
