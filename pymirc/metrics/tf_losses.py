@@ -4,7 +4,7 @@ if tf.__version__.startswith('1.'):
 else:
   from tensorflow.keras import backend as K
 
-from .tf_metrics import soft_dice_coef, soft_jaccard_index, IoU
+from .tf_metrics import soft_dice_coef, soft_jaccard_index, IoU, ssim_3d
 
 
 def weighted_binary_crossentropy(weights=[.5, 1]):
@@ -66,3 +66,25 @@ def focal_loss(gamma=2., alpha=.25, from_logits=False):
 
     return focal_loss_fixed
 
+
+def ssim_3d_loss(x, y, **kwargs):
+  """ Compute the structural similarity loss between two batches of 3D single channel images
+
+  Parameters
+  ----------
+
+  x,y : tensorflow tensors with shape [batch_size,depth,height,width,1] 
+    containing a batch of 3D images with 1 channel
+  **kwargs : dict
+    passed to tf_ssim_3d
+
+  Returns
+  -------
+  a 1D tensorflow tensor of length batch_size containing the 1 - SSIM for
+  every image pair in the batch
+
+  See also
+  ----------
+  tf_ssim_3d
+  """
+  return 1 - ssim_3d(x, y, **kwargs)

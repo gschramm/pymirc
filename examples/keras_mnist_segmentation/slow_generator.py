@@ -1,5 +1,7 @@
 import math
 import numpy as np
+import os
+import threading
 
 from tensorflow import keras
 from unet import unet
@@ -22,7 +24,11 @@ class SLOWSequence(keras.utils.Sequence):
     batch_x = self.x[start:end, ...]
     batch_y = self.y[start:end, ...]
 
-    print(f'going to sleep for {sleep_time}s')
+    # dummy calculation to produce cpu load
+    for dd in range(10000):
+      dummy = np.random.random(100000)**2
+
+    print(f' creating batch {idx}, pid {os.getpid()}, tid {threading.get_ident()}')
     sleep(self.sleep_time)
 
     return batch_x, batch_y
@@ -32,25 +38,27 @@ class SLOWSequence(keras.utils.Sequence):
 if __name__ == '__main__':
   shape      = (800,32,32,1)
   val_shape  = (80,32,32,1)
-  batch_size = 8
-  sleep_time = 1
+  batch_size = 80
+  sleep_time = 0.1
 
   np.random.seed(1)
 
   x = np.random.random(shape)
   y = (np.random.random(shape) > 0.5).astype(float)
 
-  x_val = np.random.random(val_shape)
-  y_val = (np.random.random(val_shape) > 0.5).astype(float)
-
   gen = SLOWSequence(x, y, batch_size, sleep_time = sleep_time)
 
-  model = unet(input_shape = x.shape[1:], nfeat = 2, batch_normalization = True)
+  model = unet(input_shape = x.shape[1:], nfeat = 32, batch_normalization = True)
 
   model.compile(optimizer = keras.optimizers.Adam(learning_rate = 1e-3),
                 loss = keras.losses.BinaryCrossentropy())
 
+  # use_multiporcessing in model.fit() only works correctly in tf 2.1
+  # in tf 2.0 it is always executed in the main process
+  # in tf 2.0, use fit_generator() (which is deprecated)
   history = model.fit(gen,
-                      epochs              = 2,
-                      validation_data     = (x_val, y_val),
-                      shuffle             = False)
+                      epochs              = 4,
+                      shuffle             = False,
+                      use_multiprocessing = True,
+                      workers             = 8,
+                      max_queue_size      = 8)
