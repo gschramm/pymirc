@@ -1117,6 +1117,7 @@ def fit_WB_NEMA_sphere_profiles(vol,
                                 showprofiles = True,
                                 showrcs      = True,
                                 wm           = 'dist',
+                                nmax_spheres = 6,
                                 sameSignal   = False):
     """ Analyse the sphere profiles of a NEMA scan
 
@@ -1152,6 +1153,9 @@ def fit_WB_NEMA_sphere_profiles(vol,
     wm : str, optional
       the weighting method of the data (equal, dist, sqdist)
 
+    nmax_spheres:
+      maximum number of spheres to consider (default 6)
+
     Returns
     -------
     Dictionary
@@ -1169,7 +1173,9 @@ def fit_WB_NEMA_sphere_profiles(vol,
     slices  = NEMASubvols(vol, voxsizes, margin = margin)
 
     subvols = list()
-    for ss in slices: subvols.append(vol[ss])
+    for iss, ss in enumerate(slices): 
+      if iss < nmax_spheres:
+        subvols.append(vol[ss])
      
     if Rfix == None: Rfix = [None] * len(subvols)
     if len(Rfix) < len(subvols): Rfix = Rfix + [None] * (len(subvols) - len(Rfix))
