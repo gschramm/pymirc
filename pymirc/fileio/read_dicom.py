@@ -38,7 +38,10 @@ class DicomVolume:
     # attach the first dicom header to the object
     self.firstdcmheader = dicom.read_file(self.filelist[0])
 
-    if 'NumberOfFrames' in self.firstdcmheader:
+    # the extra check if the dimension of the pixel array is bigger than 2 is needed
+    # because there are GE CT with erroneouly contain NumberOfFrames in classical slice by
+    # slice dicom files
+    if ('NumberOfFrames' in self.firstdcmheader) and (self.firstdcmheader.pixel_array.ndim > 2):
       # case of multi slice data (3d array in 1 dicom file
       # getting the ImageOrientationPatient attribute is not trivial
       # since it is stored in different tags by different vendors
@@ -228,7 +231,10 @@ class DicomVolume:
     if (self.series_type[0] == 'STATIC') or (self.series_type[0] == 'WHOLE BODY'):
       self.nframes = 1
 
-      if 'NumberOfFrames' in self.firstdcmheader:
+      # the extra check if the dimension of the pixel array is bigger than 2 is needed
+      # because there are GE CT with erroneouly contain NumberOfFrames in classical slice by
+      # slice dicom files
+      if 'NumberOfFrames' in self.firstdcmheader and (self.firstdcmheader.pixel_array.ndim > 2):
         # read multi slice data (the whole 3d volume is in one dicom file)
         data = self.get_multislice_3d_data(self.filelist[0])
       else:
