@@ -3,6 +3,7 @@ import numpy                   as np
 import pydicom
 import os
 import warnings
+import datetime
 
 from scipy.ndimage import label, find_objects
 
@@ -113,6 +114,8 @@ def labelvol_to_rtstruct(roi_vol,
   
   ds.StructureSetLabel = structureSetLabel
   ds.StructureSetName  = structureSetName
+  ds.StructureSetTime  = datetime.datetime.now().time()
+  ds.StructureSetDate  = datetime.datetime.now().date()
 
   dfr = pydicom.Dataset()
   dfr.FrameOfReferenceUID = refdcm.FrameOfReferenceUID
