@@ -233,7 +233,7 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
 
   # add all key word arguments to dicom structure
   for key, value in kwargs.items(): 
-    if dicom.datadict.tag_for_name(key) != None: setattr(ds,key,value)
+    if dicom.datadict.tag_for_keyword(key) != None: setattr(ds,key,value)
     else: warnings.warn(key + ' not in standard dicom dictionary -> will not be written')
 
   if verbose: print("Writing file", os.path.join(outputdir,filename))
