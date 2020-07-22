@@ -102,7 +102,7 @@ def aff_transform(volume, aff_mat, output_shape, trilin = True, cval = 0., os0 =
   else:
     output_volume = np.zeros((n0, n1, n2))
     # case with oversampling, we have to average neighbors
-    for i in prange(n0):
+    for i in range(n0):
       for j in range(n1):
         for k in range(n2):
           for ii in range(os0):
