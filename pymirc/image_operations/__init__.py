@@ -9,3 +9,4 @@ from .resample_img_cont           import resample_img_cont
 from .resample_cont_cont          import resample_cont_cont
 from .grad                        import grad, div, complex_grad, complex_div
 from .reorient                    import reorient_image_and_affine, flip_image_and_affine
+from .rigid_registration          import rigid_registration

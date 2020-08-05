@@ -131,7 +131,8 @@ def neg_mutual_information(x, y, nbins = 40, norm = True):
 
 #----------------------------------------------------------------
 def regis_cost_func(params, img_fix, img_float, verbose = False,
-                    rotate = True, metric = neg_mutual_information, pre_affine = None, metric_kwargs = {}):
+                    rotate = True, metric = neg_mutual_information, pre_affine = None, 
+                    metric_kwargs = {}):
   """Generic cost function for rigid registration
 
   Parameters
