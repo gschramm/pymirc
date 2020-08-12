@@ -2,11 +2,11 @@ import numpy as np
 
 from scipy.optimize import minimize
 
-import pymirc.image_operations as pymi
-import pymirc.metrics.cost_functions as pymr
+from pymirc.image_operations import kul_aff, aff_transform
+from pymirc.metrics.cost_functions import neg_mutual_information, regis_cost_func
 
 def rigid_registration(vol_float, vol_fixed, aff_float, aff_fixed,
-                       downsample_facs = [4], metric = pymr.neg_mutual_information,
+                       downsample_facs = [4], metric = neg_mutual_information,
                        opts = {'ftol':1e-2,'xtol':1e-2,'disp':True,'maxiter':20,'maxfev':5000},
                        method = 'Powell', metric_kwargs = {}):
   """ rigidly coregister a 3D floating volume to a fixed (reference) volume
@@ -53,7 +53,7 @@ def rigid_registration(vol_float, vol_fixed, aff_float, aff_fixed,
   ----
 
   To apply the registration affine transformation use:
-  new_vol = pymi.aff_transform(vol, reg_aff, vol_fixed.shape, cval = vol.min())
+  new_vol = aff_transform(vol, reg_aff, vol_fixed.shape, cval = vol.min())
   
   """
   # define the affine transformation that maps the floating to the fixed voxel grid
@@ -68,10 +68,10 @@ def rigid_registration(vol_float, vol_fixed, aff_float, aff_fixed,
       ds_aff = np.diag([dsf,dsf,dsf,1.])
       
       # down sample fixed volume
-      vol_fixed_ds = pymi.aff_transform(vol_fixed, ds_aff, 
+      vol_fixed_ds = aff_transform(vol_fixed, ds_aff, 
                                         np.ceil(np.array(vol_fixed.shape)/dsf).astype(int))
       
-      res = minimize(pymr.regis_cost_func, reg_params, method = method, options = opts,
+      res = minimize(regis_cost_func, reg_params, method = method, options = opts,
                      args = (vol_fixed_ds, vol_float, True, True, metric, pre_affine @ ds_aff,
                              metric_kwargs))
       
@@ -81,16 +81,16 @@ def rigid_registration(vol_float, vol_fixed, aff_float, aff_fixed,
  
  
   # (2) registration with full arrays
-  res = minimize(pymr.regis_cost_func, reg_params, method = method, options = opts, 
+  res = minimize(regis_cost_func, reg_params, method = method, options = opts, 
                  args = (vol_fixed, vol_float, True, True, metric, pre_affine,
                          metric_kwargs))
   reg_params = res.x.copy()
   
   
   # define the final affine transformation that maps from the PET grid to the rotated CT grid
-  reg_aff  = pre_affine @ pymi.kul_aff(reg_params, origin = np.array(vol_fixed.shape)/2)
+  reg_aff  = pre_affine @ kul_aff(reg_params, origin = np.array(vol_fixed.shape)/2)
 
   # transform the floating volume
-  vol_float_coreg = pymi.aff_transform(vol_float, reg_aff, vol_fixed.shape, cval = vol_float.min())
+  vol_float_coreg = aff_transform(vol_float, reg_aff, vol_fixed.shape, cval = vol_float.min())
 
   return vol_float_coreg, reg_aff, reg_params
