@@ -9,15 +9,79 @@ import pymirc.metrics     as pymr
 
 from pymirc.image_operations import kul_aff, aff_transform
 
-from scipy.ndimage              import label, labeled_comprehension, find_objects, gaussian_filter, binary_erosion
+from scipy.ndimage import label, labeled_comprehension, find_objects, gaussian_filter
+from scipy.ndimage import binary_erosion, median_filter
 from scipy.ndimage.measurements import center_of_mass
-from scipy.special              import erf
-from scipy.integrate            import quad
+from scipy.ndimage.morphology import binary_fill_holes
+
+from scipy.special    import erf
+from scipy.integrate  import quad
 
 from scipy.signal   import argrelextrema, find_peaks_cwt
 from scipy.optimize import minimize
 
 from lmfit    import Model
+
+def find_background_roi(vol, voxsize, Rcenter = 82, edge_margin = 28.):
+  """ find the 2D background ROI for a NEMA sphere phantom
+
+  Parameters
+  ----------
+
+  vol : 3d numpy array
+    containing the volume
+
+  voxsize: 1d numpy array 
+    containing the voxel size (mm)
+
+  Rcenter: float (optional)
+    the radius (mm) of the sphere part that is not considered - default 82.
+
+  edge_margin : float (optional)
+    margin (mm) to stay away from the boarder of the phantom - default 28.
+
+  Returns
+  -------
+
+  A tuple containing the indices of the background voxels.
+  """
+
+  # find the background value from a histogram analysis
+  h  = np.histogram(vol[vol>0.01*vol.max()].flatten(),200)
+  bg = 0.5*(h[1][np.argmax(h[0])] + h[1][np.argmax(h[0]) + 1]) 
+  
+  # get the axial slice with the maximum activity (spheres)
+  zprof = vol.sum((0,1))
+  sphere_sl = np.argmax(zprof)
+  
+  sphere_2d_img = vol[...,sphere_sl]
+  
+  bg_mask = binary_fill_holes(median_filter(np.clip(sphere_2d_img,0,0.8*bg), size = 7) > 0.5*bg)
+  
+  # erode mask by ca. 2.8 cm to stay away from the boundary
+  nerode = int(edge_margin / voxsize[0])
+  if (nerode % 2) == 0: nerode += 1
+  
+  bg_mask = binary_erosion(bg_mask, np.ones((nerode,nerode))) 
+  
+  # set center where spheres are to 0
+  com = center_of_mass(binary_fill_holes(sphere_2d_img < 0.5*bg))
+  
+  x = voxsize[0]*(np.arange(vol.shape[0]) - com[0]) - 5
+  y = voxsize[1]*(np.arange(vol.shape[1]) - com[1])
+  
+  X,Y = np.meshgrid(x,y)
+  R = np.sqrt(X**2 + Y**2)
+  
+  bg_mask[R<=Rcenter] = 0
+  
+  # generate voxel indices for background voxels
+  tmp = np.zeros(vol.shape, dtype = np.int8)
+  tmp[...,sphere_sl] = bg_mask
+  bg_inds = np.where(tmp == 1)
+
+  return bg_inds
+
 
 #----------------------------------------------------------------------  
 def cylinder_prof_integrand(eta, z, Z):
@@ -871,13 +935,6 @@ def fitspheresubvolume(vol,
     # calculate the mean recovery
     fitres.meanRC = np.mean(data[rfit <= fitres.values['R']]) 
 
-    # calculate the background variability
-    fit        = fitres.eval()
-    fitres.ibg = np.argwhere(abs(fit - fitres.values['B']) < 0.05 * fitres.values['B'])
-
-    if len(fitres.ibg > 0): fitres.bgcov = np.std(data[fitres.ibg]) / np.mean(data[fitres.ibg])
-    else:                   fitres.bgcov = np.nan   
-
     # add the sphere center to the fit results
     fitres.sphere_center = sphere_center
 
@@ -935,12 +992,12 @@ def plotspherefit(fitres, ax = None, xlim = None, ylim = None, unit = 'mm', show
 
 def NEMASubvols(input_vol,    
                 voxsizes,     
-                relTh   = 0.2,
-                minvol  = 300,
-                margin  = 9,  
-                nbins   = 100,
-                zignore = 38  
-                ):
+                relTh    = 0.2,
+                minvol   = 300,
+                margin   = 9,  
+                nbins    = 100,
+                zignore  = 38,
+                bgSignal = None):
     """ Segment a complete NEMA PET volume with several hot sphere in different subvolumes containing
         only one sphere
 
@@ -967,6 +1024,10 @@ def NEMASubvols(input_vol,
     zignore : float, optional
      distance to edge of FOV that is ignored (same unit as voxelsize) 
 
+    bgSignal : float or None, optional
+      the signal intensity of the background
+      if None, it is auto determined from a histogram analysis
+
     Returns
     -------
     list
@@ -990,7 +1051,8 @@ def NEMASubvols(input_vol,
     # first do a quick search for the biggest sphere (noisy edge of FOV can spoil max value!)
     histo = py.histogram(vol[vol > 0.01*vol.max()], nbins) 
     #bgSignal = histo[1][argrelextrema(histo[0], np.greater)[0][0]]
-    bgSignal = histo[1][find_peaks_cwt(histo[0], np.arange(nbins/6,nbins))[0]]
+    if bgSignal is None:
+      bgSignal = histo[1][find_peaks_cwt(histo[0], np.arange(nbins/6,nbins))[0]]
     thresh   = bgSignal + relTh*(vol.max() - bgSignal)
     
     vol2               = np.zeros(vol.shape, dtype = np.int)
@@ -1110,7 +1172,6 @@ def fit_WB_NEMA_sphere_profiles(vol,
                                 margin    = 9.0,
                                 dfix      = 1.5,
                                 Sfix      = None,
-                                Bfix      = None,
                                 Rfix      = None,
                                 FWHMfix   = None,
                                 earlcolor = 'lightgreen',
@@ -1132,8 +1193,8 @@ def fit_WB_NEMA_sphere_profiles(vol,
     sm_fwhm : float, optional
       FWHM of the gaussian used for post-smoothing (mm)
 
-    dfix, Sfix, Bfix : float, optional
-      fixed values for the wall thickness, signal and background
+    dfix, Sfix : float, optional
+      fixed values for the wall thickness, and signal
 
     Rfix : 1D numpy array, optional
       a 6 component array with fixed values for the sphere radii (mm)
@@ -1153,8 +1214,11 @@ def fit_WB_NEMA_sphere_profiles(vol,
     wm : str, optional
       the weighting method of the data (equal, dist, sqdist)
 
-    nmax_spheres:
+    nmax_spheres: int (optional)
       maximum number of spheres to consider (default 6)
+
+    sameSignal : bool, optional
+       whether to forace all spheres to have the signal from the biggest sphere
 
     Returns
     -------
@@ -1170,7 +1234,11 @@ def fit_WB_NEMA_sphere_profiles(vol,
         sigmas   = sigma / voxsizes
         vol      = gaussian_filter(vol, sigma = sigmas)
 
-    slices  = NEMASubvols(vol, voxsizes, margin = margin)
+    # find the 2D background ROI
+    bg_inds = find_background_roi(vol, voxsizes)
+    bg_mean = vol[bg_inds].mean()
+
+    slices  = NEMASubvols(vol, voxsizes, margin = margin, bgSignal = bg_mean)
 
     subvols = list()
     for iss, ss in enumerate(slices): 
@@ -1181,7 +1249,8 @@ def fit_WB_NEMA_sphere_profiles(vol,
     if len(Rfix) < len(subvols): Rfix = Rfix + [None] * (len(subvols) - len(Rfix))
 
     if (Sfix == None) and (sameSignal == True):
-        initfitres = fitspheresubvolume(subvols[0], voxsizes, dfix = dfix, Bfix = Bfix, FWHMfix = FWHMfix, Rfix = Rfix[0], wm = wm)
+        initfitres = fitspheresubvolume(subvols[0], voxsizes, dfix = dfix, Bfix = bg_mean, 
+                                        FWHMfix = FWHMfix, Rfix = Rfix[0], wm = wm)
         Sfix = initfitres.params['S'].value
 
     fitres = []
@@ -1189,8 +1258,8 @@ def fit_WB_NEMA_sphere_profiles(vol,
         fig, axes = py.subplots(2,3, figsize = (18,8.3))
 
     for i in range(len( subvols)):
-        fitres.append(fitspheresubvolume(subvols[i], voxsizes, dfix = dfix, Sfix = Sfix, Bfix = Bfix, 
-                                         FWHMfix = FWHMfix, Rfix = Rfix[i]))
+        fitres.append(fitspheresubvolume(subvols[i], voxsizes, dfix = dfix, Sfix = Sfix, 
+                                         Bfix = bg_mean, FWHMfix = FWHMfix, Rfix = Rfix[i]))
         if i == 0: rmax = fitres[0].rdata.max()
 
         if showprofiles: 
@@ -1213,10 +1282,9 @@ def fit_WB_NEMA_sphere_profiles(vol,
     a50RCs  = np.array([x.a50RC  for x in fitres])  / Ss
     meanRCs = np.array([x.meanRC for x in fitres])  / Ss
     maxRCs  = np.array([x.max()  for x in subvols]) / Ss
-    bgCOVs  = np.array([x.bgcov  for x in fitres])
 
     retvals = {'fitres':fitres, 'fwhms':fwhms, 'Rs':Rs, 'Bs': Bs, 'Ss':Ss, 'a50RCs':a50RCs,
-               'meanRCs':meanRCs, 'maxRCs':maxRCs, 'bgCOVs':bgCOVs, 'subvols':subvols, 'vol':vol}
+               'meanRCs':meanRCs, 'maxRCs':maxRCs, 'subvols':subvols, 'vol':vol}
 
     if showprofiles: 
         retvals['fig']  = fig
@@ -1261,14 +1329,6 @@ def fit_WB_NEMA_sphere_profiles(vol,
         axes2[2].set_ylim(min(0.29,0.95*maxRCs.min()), max(1.18,1.05*maxRCs.max()))
         axes2[2].set_xlabel('R (' + unit + ')')
         axes2[2].set_ylabel('RC max')
-
-        axes2[3].plot(Rs, bgCOVs, 'ko')
-        axes2[3].set_xlabel('R (' + unit + ')')
-        axes2[3].set_ylabel('background COV')
-        covxlim = axes2[3].get_xlim()
-        if earlcolor != None:
-            axes2[3].fill_between(np.linspace(covxlim[0],covxlim[1],3), 0.15, 0, facecolor = earlcolor, edgecolor = earlcolor)
-        axes2[3].set_ylim(0, max(0.16, 1.05*max(bgCOVs)))
 
         fig2.tight_layout()
         fig2.show()
