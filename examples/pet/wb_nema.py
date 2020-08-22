@@ -15,12 +15,10 @@ dcm     = pmf.DicomVolume('my_dcm_dir/*.dcm')
 vol     = dcm.get_data() 
 voxsize = dcm.voxsize 
 
-#res = fit_WB_NEMA_sphere_profiles(vol, voxsize, sm_fwhm = 4.5)
-#res = fit_WB_NEMA_sphere_profiles(vol, voxsize, sm_fwhm = 4.5, Rfix = [18.5, 14., 11., 8.5, 6.5, 5.])
-res = fit_WB_NEMA_sphere_profiles(vol, voxsize, sm_fwhm = 4.5, Rfix = [18.5, 14., 11., 8.5, 6.5, 5.], Sfix = 16914)
+fitres, sphere_results = fit_WB_NEMA_sphere_profiles(vol, voxsize, sameSignal = True, sm_fwhm = 4.5)
+                                                     #Rfix = [18.5, 14.0, 11.0, 8.5, 6.5, 5.])
 
-# show the n-th sphere sub volume
-#pv.ThreeAxisViewer(res['subvols'][5], voxsize = voxsize, imshow_kwargs = {'vmin': 0, 'vmax': res['Ss'][0]})
+print(sphere_results)
 
-# show the whole volume
-#pv.ThreeAxisViewer(res['vol'], voxsize = voxsize, imshow_kwargs = {'vmin': 0, 'vmax': res['Ss'][0]})
+fig1 = show_WB_NEMA_profiles(fitres)
+fig2 = show_WB_NEMA_recoveries(sphere_results, sphere_results['signal'].values[0])

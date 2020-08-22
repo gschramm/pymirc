@@ -3,6 +3,7 @@
 import math
 import numpy as np
 import pylab as py
+import pandas as pd
 import matplotlib.patches as patches
 
 import pymirc.metrics     as pymr
@@ -928,12 +929,15 @@ def fitspheresubvolume(vol,
     fitres.rdata = rfit
     if cl: fitres.cls   = fitres.conf_interval()
 
-    # calculate the a50 recoveries 
-    fitres.a50th  = fitres.values['B'] + 0.5*(vol.max() - fitres.values['B'])
-    fitres.a50RC  = np.mean(data[data >= fitres.a50th])
+    # calculate the a50 mean
+    fitres.a50th     = fitres.values['B'] + 0.5*(vol.max() - fitres.values['B'])
+    fitres.mean_a50  = np.mean(data[data >= fitres.a50th])
 
-    # calculate the mean recovery
-    fitres.meanRC = np.mean(data[rfit <= fitres.values['R']]) 
+    # calculate the mean
+    fitres.mean = np.mean(data[rfit <= fitres.values['R']]) 
+
+    # calculate the max
+    fitres.max = data.max()
 
     # add the sphere center to the fit results
     fitres.sphere_center = sphere_center
@@ -1174,9 +1178,6 @@ def fit_WB_NEMA_sphere_profiles(vol,
                                 Sfix      = None,
                                 Rfix      = None,
                                 FWHMfix   = None,
-                                earlcolor = 'lightgreen',
-                                showprofiles = True,
-                                showrcs      = True,
                                 wm           = 'dist',
                                 nmax_spheres = 6,
                                 sameSignal   = False):
@@ -1201,15 +1202,6 @@ def fit_WB_NEMA_sphere_profiles(vol,
 
     margin: float, optional
       margin around segmented spheres (same unit as voxel size)
-
-    earlcolor : str, optinal
-      color used to plot the earl limits
-
-    showprofiles : bool, optional
-      show the fitted profiles (default True)
-
-    showrcs : bool, optional
-      show the fitted RCs with the EARL limits (default True)
 
     wm : str, optional
       the weighting method of the data (equal, dist, sqdist)
@@ -1237,6 +1229,7 @@ def fit_WB_NEMA_sphere_profiles(vol,
     # find the 2D background ROI
     bg_inds = find_background_roi(vol, voxsizes)
     bg_mean = vol[bg_inds].mean()
+    bg_cov  = vol[bg_inds].std() / bg_mean
 
     slices  = NEMASubvols(vol, voxsizes, margin = margin, bgSignal = bg_mean)
 
@@ -1248,92 +1241,99 @@ def fit_WB_NEMA_sphere_profiles(vol,
     if Rfix == None: Rfix = [None] * len(subvols)
     if len(Rfix) < len(subvols): Rfix = Rfix + [None] * (len(subvols) - len(Rfix))
 
+    # initial fit to get signal in the biggest sphere
     if (Sfix == None) and (sameSignal == True):
         initfitres = fitspheresubvolume(subvols[0], voxsizes, dfix = dfix, Bfix = bg_mean, 
                                         FWHMfix = FWHMfix, Rfix = Rfix[0], wm = wm)
         Sfix = initfitres.params['S'].value
 
+    # fit of all spheres
     fitres = []
-    if showprofiles: 
-        fig, axes = py.subplots(2,3, figsize = (18,8.3))
+    for i in range(len(subvols)):
+      fitres.append(fitspheresubvolume(subvols[i], voxsizes, dfix = dfix, Sfix = Sfix, 
+                                       Bfix = bg_mean, FWHMfix = FWHMfix, Rfix = Rfix[i]))
 
-    for i in range(len( subvols)):
-        fitres.append(fitspheresubvolume(subvols[i], voxsizes, dfix = dfix, Sfix = Sfix, 
-                                         Bfix = bg_mean, FWHMfix = FWHMfix, Rfix = Rfix[i]))
-        if i == 0: rmax = fitres[0].rdata.max()
-
-        if showprofiles: 
-            plotspherefit(fitres[-1], ylim = (0, 1.05*max([x.max() for x in subvols])), ax = axes[np.unravel_index(i,axes.shape)], xlim = (0,1.5*rmax))
-
-    if showprofiles:
-        if len(subvols) < 6:
-            for i in np.arange(len(subvols),6):
-                ax = axes[np.unravel_index(i,axes.shape)]
-                ax.set_axis_off()
-
-        fig.tight_layout()
-        fig.show()
-
+    # summary of results
     fwhms = np.array([x.values['FWHM'] for x in fitres])
     Rs    = np.array([x.values['R'] for x in fitres])
     Bs    = np.array([x.values['B'] for x in fitres])
     Ss    = np.array([x.values['S'] for x in fitres])
    
-    a50RCs  = np.array([x.a50RC  for x in fitres])  / Ss
-    meanRCs = np.array([x.meanRC for x in fitres])  / Ss
-    maxRCs  = np.array([x.max()  for x in subvols]) / Ss
+    sphere_mean_a50  = np.array([x.mean_a50  for x in fitres])  
+    sphere_mean      = np.array([x.mean      for x in fitres])  
+    sphere_max       = np.array([x.max       for x in fitres])  
 
-    retvals = {'fitres':fitres, 'fwhms':fwhms, 'Rs':Rs, 'Bs': Bs, 'Ss':Ss, 'a50RCs':a50RCs,
-               'meanRCs':meanRCs, 'maxRCs':maxRCs, 'subvols':subvols, 'vol':vol}
+    sphere_results = pd.DataFrame({'R':Rs,'FWHM':fwhms,'signal':Ss, 'mean_a50':sphere_mean_a50,
+                                   'mean':sphere_mean, 'max':sphere_max, 
+                                   'background_mean': bg_mean, 'background_cov': bg_cov}, 
+                                    index = np.arange(1,len(subvols)+1))
 
-    if showprofiles: 
-        retvals['fig']  = fig
-        retvals['axes'] = axes
+    return fitres, sphere_results
 
-    if showrcs:
-        fig2, axes2 = py.subplots(1,4, figsize = (11.4,4.15), sharex = True)
-        RCa50_min  = np.array([0.76, 0.72, 0.63, 0.57, 0.44, 0.27]) 
-        RCa50_max  = np.array([0.89, 0.85, 0.78, 0.73, 0.60, 0.43]) 
-        RCmax_min  = np.array([0.95, 0.91, 0.83, 0.73, 0.59, 0.34]) 
-        RCmax_max  = np.array([1.16, 1.13, 1.09, 1.01, 0.85, 0.57]) 
+#-------------------------------------------------------------------------------------------
+def show_WB_NEMA_profiles(fitres):
 
-        axes2[0].plot(Rs, fwhms , 'ko')
-        axes2[0].set_xlabel('R (' + unit + ')')
-        axes2[0].set_ylabel('FWHM (' + unit + ')')
-        axes2[0].set_ylim(0.95*fwhms.min(), 1.05*fwhms.max())
+  nsph = len(fitres)
 
-        axes2[0].axhline(fwhms.mean(), color = 'k')
-        axes2[0].axhline(fwhms.mean() + fwhms.std(), color = 'k', ls = '--')
-        axes2[0].axhline(fwhms.mean() - fwhms.std(), color = 'k', ls = '--')
+  rmax = fitres[0].rdata.max()
+  fig, axes = py.subplots(2,3, figsize = (18,8.3))
 
-        # add the EARL limits
-        if earlcolor != None:
-            for i in range(len(Rs)): 
-                axes2[1].add_patch(patches.Rectangle((Rs[i] - 0.5, RCa50_min[i]), 1, 
-                                   RCa50_max[i] - RCa50_min[i], 
-                                   facecolor = earlcolor, edgecolor = 'None'))
+  ymax = 1.05*max([x.max for x in fitres])
 
-        axes2[1].plot(Rs, a50RCs, 'ko')
-        axes2[1].set_ylim(min(0.25,0.95*a50RCs.min()), max(1.02,1.05*a50RCs.max()))
-        axes2[1].set_xlabel('R (' + unit + ')')
-        axes2[1].set_ylabel('RC a50')
+  for i in range(nsph):
+    plotspherefit(fitres[i], ylim = (0, ymax), 
+                  ax = axes[np.unravel_index(i,axes.shape)], xlim = (0,1.5*rmax))
+  if nsph < 6:
+    for i in np.arange(nsph,6):
+        ax = axes[np.unravel_index(i,axes.shape)]
+        ax.set_axis_off()
 
-        # add the EARL limits
-        if earlcolor != None:
-            for i in range(len(Rs)): 
-                axes2[2].add_patch(patches.Rectangle((Rs[i] - 0.5, RCmax_min[i]), 1, 
-                                   RCmax_max[i] - RCmax_min[i], 
-                                   facecolor = earlcolor, edgecolor = 'None'))
-   
-        axes2[2].plot(Rs, maxRCs, 'ko')
-        axes2[2].set_ylim(min(0.29,0.95*maxRCs.min()), max(1.18,1.05*maxRCs.max()))
-        axes2[2].set_xlabel('R (' + unit + ')')
-        axes2[2].set_ylabel('RC max')
+  fig.tight_layout()
+  fig.show()
 
-        fig2.tight_layout()
-        fig2.show()
+  return fig
 
-        retvals['fig2']  = fig2
-        retvals['axes2'] = axes2
+#-------------------------------------------------------------------------------------------
+def show_WB_NEMA_recoveries(sphere_results, true_activity, earlcolor = 'lightgreen'):
 
-    return retvals
+  unit = 'mm'   
+
+  a50RCs = sphere_results['mean_a50'].values / true_activity
+  maxRCs = sphere_results['max'].values / true_activity
+  Rs     = sphere_results['R'].values
+
+  fig2, axes2 = py.subplots(1,2, figsize = (6,4.), sharex = True)
+  RCa50_min  = np.array([0.76, 0.72, 0.63, 0.57, 0.44, 0.27]) 
+  RCa50_max  = np.array([0.89, 0.85, 0.78, 0.73, 0.60, 0.43]) 
+  RCmax_min  = np.array([0.95, 0.91, 0.83, 0.73, 0.59, 0.34]) 
+  RCmax_max  = np.array([1.16, 1.13, 1.09, 1.01, 0.85, 0.57]) 
+
+  # add the EARL limits
+  if earlcolor != None:
+      for i in range(len(Rs)): 
+          axes2[0].add_patch(patches.Rectangle((Rs[i] - 0.5, RCa50_min[i]), 1, 
+                             RCa50_max[i] - RCa50_min[i], 
+                             facecolor = earlcolor, edgecolor = 'None'))
+
+
+  axes2[0].plot(Rs, a50RCs, 'ko')
+  axes2[0].set_ylim(min(0.25,0.95*a50RCs.min()), max(1.02,1.05*a50RCs.max()))
+  axes2[0].set_xlabel('R (' + unit + ')')
+  axes2[0].set_ylabel('RC a50')
+
+  # add the EARL limits
+  if earlcolor != None:
+      for i in range(len(Rs)): 
+          axes2[1].add_patch(patches.Rectangle((Rs[i] - 0.5, RCmax_min[i]), 1, 
+                             RCmax_max[i] - RCmax_min[i], 
+                             facecolor = earlcolor, edgecolor = 'None'))
+
+  axes2[1].plot(Rs, maxRCs, 'ko')
+  axes2[1].set_ylim(min(0.29,0.95*maxRCs.min()), max(1.18,1.05*maxRCs.max()))
+  axes2[1].set_xlabel('R (' + unit + ')')
+  axes2[1].set_ylabel('RC max')
+
+  fig2.tight_layout()
+  fig2.show()
+
+  return fig2
