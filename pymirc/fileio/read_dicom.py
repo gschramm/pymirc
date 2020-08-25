@@ -18,6 +18,11 @@ class DicomVolume:
     (1) a list of 2d dicom files containing the image data of a 3D/4D dicom series
     (2) a string containing a pattern passed to glob.glob to generate the file list in (1)
 
+  fallback_series_type : 2 element list
+    series type to use if not given in the header as tag SeriesType.
+    Valid values for the 1st element are: "STATIC", "DYNAMIC", "GATED", "WHOLE BODY"
+    Valid values for the 2nd element are: "IMAGE", "REPROJECTION"
+
   Note
   ----
   The aim of this class is to get 3D/4D numpy arrays from a set of 2D dicom files of a dicom series
@@ -30,7 +35,7 @@ class DicomVolume:
   img_aff = dcm_vol.affine
   dcm_hdr = dcm_vol.firstdcmheader
   """
-  def __init__(self,filelist):
+  def __init__(self, filelist, fallback_series_type = ['STATIC','IMAGE']):
     
     if   isinstance(filelist,list): self.filelist = filelist
     elif isinstance(filelist,str):  self.filelist = glob.glob(filelist)
@@ -102,8 +107,8 @@ class DicomVolume:
     if "SeriesType" in self.firstdcmheader:
       self.series_type = self.firstdcmheader.SeriesType
     else:
-      self.series_type = dicom.multival.MultiValue(str,['STATIC','IMAGE'])
-      warnings.warn('Cannot find SeriesType in first dicom header. Setting it to STATIC/IMAGE')
+      self.series_type = dicom.multival.MultiValue(str, fallback_series_type)
+      warnings.warn(f'Cannot find SeriesType in first dicom header. Setting it to {fallback_series_type}')
 
   #------------------------------------------------------------------------------------------------------
   def reorient_volume(self, patvol):
