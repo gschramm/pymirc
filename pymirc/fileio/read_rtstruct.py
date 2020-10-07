@@ -1,4 +1,5 @@
 import pydicom
+import warnings
 import numpy as np
 import pylab as py
 
@@ -85,11 +86,17 @@ def read_rtstruct_contour_data(rtstruct_file,
   allroinames = [x.ROIName if 'ROIName' in x else '' for x in ds.StructureSetROISequence]
 
   if roinames is None: roinames = allroinames.copy()
- 
+
   for roiname in roinames:
     i = allroinames.index(roiname)
 
-    contour_seq    = ctrs[i].ContourSequence
+    if 'ContourSequence' in ctrs[i]:
+      contour_seq = ctrs[i].ContourSequence
+    else:
+      warnings.warn(f"The ROI with name '{roiname}' appears to be empty.")
+      contour_seq = []
+
+
     contour_points = []
     contour_orientations = []
   
