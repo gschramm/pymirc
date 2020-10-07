@@ -18,10 +18,13 @@ class DicomVolume:
     (1) a list of 2d dicom files containing the image data of a 3D/4D dicom series
     (2) a string containing a pattern passed to glob.glob to generate the file list in (1)
 
-  fallback_series_type : 2 element list
+  fallback_series_type : 2 element tuple
     series type to use if not given in the header as tag SeriesType.
     Valid values for the 1st element are: "STATIC", "DYNAMIC", "GATED", "WHOLE BODY"
     Valid values for the 2nd element are: "IMAGE", "REPROJECTION"
+
+  verbose: bool
+    print verbose output
 
   Note
   ----
@@ -35,8 +38,10 @@ class DicomVolume:
   img_aff = dcm_vol.affine
   dcm_hdr = dcm_vol.firstdcmheader
   """
-  def __init__(self, filelist, fallback_series_type = ['STATIC','IMAGE']):
-    
+  def __init__(self, filelist, fallback_series_type = ('STATIC','IMAGE'), verbose = True):
+   
+    self.verbose = verbose
+ 
     if   isinstance(filelist,list): self.filelist = filelist
     elif isinstance(filelist,str):  self.filelist = glob.glob(filelist)
 
@@ -144,34 +149,34 @@ class DicomVolume:
         self.yvoxsize, self.zvoxsize = self.dr, self.dc
         self.xvoxsize                = self.sliceDistance
     elif(self.normaxis == 0 and self.colaxis == 2 and self.rowaxis == 1):
-        print('--- swapping axis 1 and 2')
+        if self.verbose: print('--- swapping axis 1 and 2')
         patvol                  = np.swapaxes(patvol,1,2) 
         self.v1, self.v2             = self.v2, self.v1
         self.zvoxsize, self.yvoxsize = self.dr, self.dc
         self.xvoxsize                = self.sliceDistance
     elif(self.normaxis == 1 and self.colaxis == 0 and self.rowaxis == 2):
-        print('--- swapping axis 0 and 1')
+        if self.verbose: print('--- swapping axis 0 and 1')
         patvol                  = np.swapaxes(patvol,0,1) 
         self.v0, self.v1             = self.v1, self.v0
         self.xvoxsize, self.zvoxsize = self.dr, self.dc
         self.yvoxsize                = self.sliceDistance
     elif(self.normaxis == 1 and self.colaxis == 2 and self.rowaxis == 0):
-        print('--- swapping axis 0 and 1')
-        print('--- swapping axis 0 and 2')
+        if self.verbose: print('--- swapping axis 0 and 1')
+        if self.verbose: print('--- swapping axis 0 and 2')
         patvol                  = np.swapaxes(np.swapaxes(patvol,0,1),0,2) 
         self.v0, self.v1             = self.v1, self.v0
         self.v0, self.v2             = self.v2, self.v0
         self.zvoxsize, self.xvoxsize = self.dr, self.dc
         self.yvoxsize                = self.sliceDistance
     elif(self.normaxis == 2 and self.colaxis == 1 and self.rowaxis == 0):
-        print('--- swapping axis 0 and 2')
+        if self.verbose: print('--- swapping axis 0 and 2')
         patvol                  = np.swapaxes(patvol,0,2) 
         self.v0, self.v2             = self.v2, self.v0
         self.yvoxsize, self.xvoxsize = self.dr, self.dc
         self.zvoxsize                = self.sliceDistance
     elif(self.normaxis == 2 and self.colaxis == 0 and self.rowaxis == 1):
-        print('--- swapping axis 0 and 2')
-        print('--- swapping axis 0 and 1')
+        if self.verbose: print('--- swapping axis 0 and 2')
+        if self.verbose: print('--- swapping axis 0 and 1')
         patvol                  = np.swapaxes(np.swapaxes(patvol,0,2),0,1) 
         self.v0, self.v2             = self.v2, self.v0
         self.v0, self.v1             = self.v1, self.v0
@@ -204,7 +209,7 @@ class DicomVolume:
       array containing the data
     """
     if not self.read_all_dcms:
-      print('Analyzing dicom headers')
+      if self.verbose: print('Analyzing dicom headers')
       self.dicomlist     = [dicom.read_file(x) for x in self.filelist] 
       self.read_all_dcms = True
 
@@ -256,7 +261,7 @@ class DicomVolume:
       self.AcquisitionDates = np.empty(self.nframes, dtype = object)
 
       for frame in frames:
-        print('Reading frame ' + str(frame) + ' / ' + str(self.nframes))
+        if self.verbose: print('Reading frame ' + str(frame) + ' / ' + str(self.nframes))
         inds = np.where(self.TemporalPositionIdentifiers == self.uniq_TemporalPositionIdentifiers[frame - 1])[0]
         data.append(self.get_3d_data([self.dicomlist[i] for i in inds]))
 
@@ -533,7 +538,7 @@ class DicomVolume:
 
   def write(self):
     for i in xrange(len(self.filelist)):
-        print("\nWriting dicom file: ", self.filelist[i])
+        if self.verbose: print("\nWriting dicom file: ", self.filelist[i])
         dicom.write_file(self.filelist[i],dicomlist[i])
 
 ################################################################################
