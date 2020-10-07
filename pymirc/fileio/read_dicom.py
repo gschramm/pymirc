@@ -18,6 +18,10 @@ class DicomVolume:
     (1) a list of 2d dicom files containing the image data of a 3D/4D dicom series
     (2) a string containing a pattern passed to glob.glob to generate the file list in (1)
 
+   dicomlist: list of pydicom FileDatasets
+     instead of specifing filelist, the list of pydicom FileDatasets can also be
+     given directly. In this case filelist must not be given!
+
   fallback_series_type : 2 element tuple
     series type to use if not given in the header as tag SeriesType.
     Valid values for the 1st element are: "STATIC", "DYNAMIC", "GATED", "WHOLE BODY"
@@ -38,15 +42,29 @@ class DicomVolume:
   img_aff = dcm_vol.affine
   dcm_hdr = dcm_vol.firstdcmheader
   """
-  def __init__(self, filelist, fallback_series_type = ('STATIC','IMAGE'), verbose = True):
+  def __init__(self, filelist = None, dicomlist= None, fallback_series_type = ('STATIC','IMAGE'), verbose = True):
    
     self.verbose = verbose
  
     if   isinstance(filelist,list): self.filelist = filelist
     elif isinstance(filelist,str):  self.filelist = glob.glob(filelist)
+    else:                           self.filelist = None
+
+    self.dicomlist = dicomlist
+
+    # throw error if neither filelist nor dicomlist are given
+    if (self.filelist is None) and (self.dicomlist is None):
+      raise InputError('Either filelist or dicomlist must be given as input') 
+
+    # throw error if both filelist and dicomlist are given
+    if (self.filelist is not None) and (self.dicomlist is not None):
+      raise InputError('Either filelist or dicomlist must be given as input') 
 
     # attach the first dicom header to the object
-    self.firstdcmheader = dicom.read_file(self.filelist[0])
+    if self.filelist is not None:
+      self.firstdcmheader = dicom.read_file(self.filelist[0])
+    else: 
+      self.firstdcmheader = self.dicomlist[0]
 
     # the extra check if the dimension of the pixel array is bigger than 2 is needed
     # because there are GE CT with erroneouly contain NumberOfFrames in classical slice by
@@ -210,7 +228,10 @@ class DicomVolume:
     """
     if not self.read_all_dcms:
       if self.verbose: print('Analyzing dicom headers')
-      self.dicomlist     = [dicom.read_file(x) for x in self.filelist] 
+
+      if self.dicomlist is None:
+        self.dicomlist = [dicom.read_file(x) for x in self.filelist] 
+
       self.read_all_dcms = True
 
       self.TemporalPositionIdentifiers = []
@@ -231,6 +252,11 @@ class DicomVolume:
           else:
             acq_t = '000000'
 
+          # if the trigger time is in the data we add it to the acq. time
+          # this is needed to read GE gated PET data
+          if 'TriggerTime' in dcm:
+            acq_t += ('.' + str(dcm.TriggerTime)) 
+
           self.TemporalPositionIdentifiers.append(acq_d + acq_t)
 
       self.TemporalPositionIdentifiers = np.array(self.TemporalPositionIdentifiers)
@@ -246,7 +272,10 @@ class DicomVolume:
       # slice dicom files
       if 'NumberOfFrames' in self.firstdcmheader and (self.firstdcmheader.pixel_array.ndim > 2):
         # read multi slice data (the whole 3d volume is in one dicom file)
-        data = self.get_multislice_3d_data(self.filelist[0])
+        if self.filelist is not None:
+          data = self.get_multislice_3d_data(dicom.read_file(self.filelist[0]))
+        else:
+          data = self.get_multislice_3d_data(self.dicomlist[0])
       else:
         # read 3d data stored in multiple 2d dicom files
         data = self.get_3d_data(self.dicomlist)
@@ -276,19 +305,18 @@ class DicomVolume:
     return data 
    
   #------------------------------------------------------------------------------------------------------
-  def get_multislice_3d_data(self, dicomfile):
+  def get_multislice_3d_data(self, dcm_data):
     """get data from a multislice 3D dicom file (as e.g. used in SPECT or molecubes dicoms)
 
     Parameters
     ----------
-    dicomfile : str
-      name of the multislice dicom file
+    dcm_data : pydicom FileDataset 
+      as returned by pydicom.read_file
 
     Returns
     -------
     a 3D numpy array
     """
-    dcm_data   = dicom.read_file(dicomfile)
     pixelarray = dcm_data.pixel_array.copy()
 
     self.Nslices, self.Nrows, self.Ncols = pixelarray.shape
@@ -473,7 +501,9 @@ class DicomVolume:
     # so we use all dicom files as input for the overlay
 
     if not self.read_all_dcms:
-      self.dicomlist     = [dicom.read_file(x) for x in self.filelist] 
+      if self.dicomlist is None:
+        self.dicomlist = [dicom.read_file(x) for x in self.filelist] 
+
       self.read_all_dcms = True
 
     d = [self.distanceMeasure(x) for x in self.dicomlist]
@@ -532,14 +562,14 @@ class DicomVolume:
     d = np.dot(T,self.n)
     return d
 
-  def setAttibute(self, attribute, value):
-    for dcm in dicomlist: setattr(dcm,attribute,value) 
-    for dcm2 in dicomlistsorted: setattr(dcm2,attribute,value)
+  #def setAttibute(self, attribute, value):
+  #  for dcm in dicomlist: setattr(dcm,attribute,value) 
+  #  for dcm2 in dicomlistsorted: setattr(dcm2,attribute,value)
 
-  def write(self):
-    for i in xrange(len(self.filelist)):
-        if self.verbose: print("\nWriting dicom file: ", self.filelist[i])
-        dicom.write_file(self.filelist[i],dicomlist[i])
+  #def write(self):
+  #  for i in xrange(len(self.filelist)):
+  #      if self.verbose: print("\nWriting dicom file: ", self.filelist[i])
+  #      dicom.write_file(self.filelist[i],dicomlist[i])
 
 ################################################################################
 ################################################################################
