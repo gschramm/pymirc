@@ -22,5 +22,6 @@ setuptools.setup(
                       'matplotlib>=2.2.2',
                       'pydicom>=1.1',
                       'scikit-image>=0.14',
-                      'numba>=0.39'],
+                      'numba>=0.39',
+                      'nibabel>=3.0'],
 )
