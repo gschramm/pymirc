@@ -241,6 +241,10 @@ class DicomVolume:
       for dcm in self.dicomlist:
         if 'TemporalPositionIdentifier' in dcm:
           self.TemporalPositionIdentifiers.append(dcm.TemporalPositionIdentifier)
+        elif (dcm.Modality == 'MR') and ('EchoNumbers' in dcm):
+          self.TemporalPositionIdentifiers.append(dcm.EchoNumbers)
+          self.series_type[0] = 'DYNAMIC'
+          warnings.warn(f'Found multiple echos in MR dicom data. Setting series type to DYNAMIC')
         else:
           if 'AcquisitionDate' in dcm:
             acq_d = dcm.AcquisitionDate
