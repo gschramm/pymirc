@@ -239,12 +239,12 @@ class DicomVolume:
       # to figure out which 2d dicom file belongs to which time frame
       # we use the TemporalPositionIdentifier (not very common) or the acquisition date time
       for dcm in self.dicomlist:
-        if 'TemporalPositionIdentifier' in dcm:
-          self.TemporalPositionIdentifiers.append(dcm.TemporalPositionIdentifier)
+        if (dcm.Modality == 'MR') and ('AcquisitionNumber' in dcm):
+          self.TemporalPositionIdentifiers.append(dcm.AcquisitionNumber)
         elif (dcm.Modality == 'MR') and ('EchoNumbers' in dcm):
           self.TemporalPositionIdentifiers.append(dcm.EchoNumbers)
-          self.series_type[0] = 'DYNAMIC'
-          warnings.warn(f'Found multiple echos in MR dicom data. Setting series type to DYNAMIC')
+        elif 'TemporalPositionIdentifier' in dcm:
+          self.TemporalPositionIdentifiers.append(dcm.TemporalPositionIdentifier)
         else:
           if 'AcquisitionDate' in dcm:
             acq_d = dcm.AcquisitionDate
@@ -266,6 +266,11 @@ class DicomVolume:
       self.TemporalPositionIdentifiers = np.array(self.TemporalPositionIdentifiers)
       self.uniq_TemporalPositionIdentifiers = np.unique(self.TemporalPositionIdentifiers)
       self.uniq_TemporalPositionIdentifiers.sort()
+
+      # if an MR data contains multiple echos, we interpret it as dynamic data
+      if ((self.dicomlist[0].Modality == 'MR') and (len(self.uniq_TemporalPositionIdentifiers) > 1)):
+        self.series_type[0] = 'DYNAMIC'
+        warnings.warn(f'Found multiple Temporal Positions in MR data set. Setting series type to DYNAMIC')
 
     # read static image
     if (self.series_type[0] == 'STATIC') or (self.series_type[0] == 'WHOLE BODY'):
