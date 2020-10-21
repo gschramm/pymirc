@@ -13,16 +13,16 @@ def random_deformation_field(shape, shift = 2., n = 30, npad = 5, gaussian_std =
   shape : 3 element tuple
     shape of the deformation fields
 
-  shift : float, optional
+  shift : float, 3 element tuple, optional
     standard devitiation of the displacements in the deformation fields (default 2)
 
-  n : int, optional
+  n : int, 3 element tuple, optional
     dimension of low resolution grid on which random deformations are sampled (default 30)
 
-  npad: int, optional 
+  npad: int, 3 element tuple, optional
     number of voxels used for 0 padding of the low resolution grid (default 5)
 
-  gaussian_std: float, optional
+  gaussian_std: float, 3 element tuple, optional
     standard deviation of gaussian kernel used to smooth the low resolution deformations (default 6)
 
   Returns
@@ -30,17 +30,28 @@ def random_deformation_field(shape, shift = 2., n = 30, npad = 5, gaussian_std =
   tuple of 3 3d numpy arrays
     containing the displacements in the 3 dimensions
   """
-  d0 = gaussian_filter(np.pad(np.random.randn(n,n,n), npad, mode = 'constant'), gaussian_std)
-  d1 = gaussian_filter(np.pad(np.random.randn(n,n,n), npad, mode = 'constant'), gaussian_std)
-  d2 = gaussian_filter(np.pad(np.random.randn(n,n,n), npad, mode = 'constant'), gaussian_std)
+  if not isinstance(shift, tuple):
+    shift = (shift,) * 3
+
+  if not isinstance(n, tuple):
+    n = (n,) * 3
+
+  if not isinstance(npad, tuple):
+    npad = (npad,) * 3
+
+  if not isinstance(gaussian_std, tuple):
+    gaussian_std = (gaussian_std,) * 3
+
+  d0 = gaussian_filter(np.pad(np.random.randn(n[0],n[1],n[2]), npad[0], mode = 'constant'), gaussian_std[0])
+  d1 = gaussian_filter(np.pad(np.random.randn(n[0],n[1],n[2]), npad[1], mode = 'constant'), gaussian_std[1])
+  d2 = gaussian_filter(np.pad(np.random.randn(n[0],n[1],n[2]), npad[2], mode = 'constant'), gaussian_std[2])
 
   d0 = zoom3d(d0, np.array(shape) / np.array(d0.shape))
   d1 = zoom3d(d1, np.array(shape) / np.array(d1.shape))
   d2 = zoom3d(d2, np.array(shape) / np.array(d2.shape))
 
-  d0 *= shift/d0.std()
-  d1 *= shift/d1.std()
-  d2 *= shift/d2.std()
+  d0 *= shift[0]/d0.std()
+  d1 *= shift[1]/d1.std()
+  d2 *= shift[2]/d2.std()
 
   return d0, d1, d2
-
