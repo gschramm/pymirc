@@ -277,23 +277,6 @@ class ThreeAxisViewer:
         self.l2x.append(self.axes[3*i + 2].axvline(self.sl_y, color = 'r',ls = ls))
         self.l2y.append(self.axes[3*i + 2].axhline(self.shape[self.iz] - self.sl_z, color = 'r',ls = ls))
 
-    # set up figure for sliders
-    self.fig_sl, self.ax_sl = py.subplots(2*self.n_vols, 1, figsize = (4,3), squeeze = False)
-
-    self.vmin_boxes = []
-    self.vmax_boxes = []
-
-    for i in range(self.n_vols):
-      self.vmin_boxes.append(TextBox(self.ax_sl[2*i,0], 'vmin', 
-                                     initial = str(self.imshow_kwargs[i]['vmin'])))
-      self.vmax_boxes.append(TextBox(self.ax_sl[2*i+1,0], 'vmax',
-                                     initial = str(self.imshow_kwargs[i]['vmax'])))
-
-      self.vmin_boxes[-1].on_submit(self.update_vmin)
-      self.vmax_boxes[-1].on_submit(self.update_vmax)
-
-    self.fig_sl.show()
-
   #------------------------------------------------------------------------
   def update_colorbars(self):
     for i in range(self.n_vols): 
@@ -301,9 +284,9 @@ class ThreeAxisViewer:
       self.cb_bottom_labels[i].set_text(f'{self.imshow_kwargs[i]["vmin"]:.1E}')
 
   #------------------------------------------------------------------------
-  def update_vmin(self,text):
-    for i in range(self.n_vols):
-      self.imshow_kwargs[i]['vmin'] = float(self.vmin_boxes[i].text)
+  def set_vmin(self, i, val):
+    if i < self.n_vols:
+      self.imshow_kwargs[i]['vmin'] = val
       self.imgs[i][0].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][1].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][2].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
@@ -312,9 +295,9 @@ class ThreeAxisViewer:
       self.fig.canvas.draw()
 
   #------------------------------------------------------------------------
-  def update_vmax(self,text):
-    for i in range(self.n_vols):
-      self.imshow_kwargs[i]['vmax'] = float(self.vmax_boxes[i].text)
+  def set_vmax(self, i, val):
+    if i < self.n_vols:
+      self.imshow_kwargs[i]['vmax'] = val
       self.imgs[i][0].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][1].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][2].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
