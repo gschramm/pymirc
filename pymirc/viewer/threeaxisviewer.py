@@ -4,6 +4,8 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import ImageGrid
 from matplotlib.widgets      import Slider, TextBox
 
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 class ThreeAxisViewer:
   """ simplistic three axis viewer for multiple aligned 3d or 4d arrays
 
@@ -177,7 +179,36 @@ class ThreeAxisViewer:
       self.ax[i,0].set_axis_off()
       self.ax[i,1].set_axis_off()    
       self.ax[i,2].set_axis_off()
-   
+ 
+
+    if rowlabels is None:
+      self.fig.subplots_adjust(left=0,right=0.95,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
+
+    else:
+      for ivol, label in enumerate(rowlabels):
+        self.fig.text(0.01,1 - (ivol + 0.5)/self.n_vols, label, rotation='vertical', 
+                      size = 'large', verticalalignment = 'center')
+      self.fig.subplots_adjust(left=0.03,right=0.95,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
+    self.cb_ax = []
+
+    # align all subplots in a row to bottom and add axes for colorbars
+    for irow in range(self.n_vols):
+      bboxes = []
+      for icol in range(3):
+        bboxes.append(self.ax[irow,icol].get_position())
+      y0s = [x.y0 for x in bboxes]  
+      y0min = min(y0s)
+ 
+      for icol in range(3):
+        bbox = bboxes[icol]
+        self.ax[irow,icol].set_position([bbox.x0, y0min, bbox.x1-bbox.x0, bbox.y1-bbox.y0])
+
+      self.cb_ax.append(inset_axes(self.ax[irow,-1], width=0.01*width, 
+                        height=0.8*width*fig_asp/self.n_vols,
+                        loc='lower left', bbox_to_anchor=(1.05, 0., 1, 1),
+                        bbox_transform=self.ax[irow,-1].transAxes, borderpad=0))
+
+
     # add the overlay images in case given
     if self.ovols is not None:
       self.oimgs = []
@@ -201,39 +232,28 @@ class ThreeAxisViewer:
     self.ax[0,1].set_title(str(self.sl_y) + self.fstr, fontsize='small') 
     self.ax[0,2].set_title(str(self.sl_x) + self.fstr, fontsize='small') 
 
+    # add colors bars
+    self.cb_top_labels = []
+    self.cb_bottom_labels = []
+
+    for i in range(self.n_vols): 
+      self.cb_ax[i].imshow(np.arange(128).reshape((128,1)), aspect = 0.2, 
+                           cmap = self.imshow_kwargs[i]['cmap']) 
+      self.cb_top_labels.append(self.cb_ax[i].text(1.2, 1, f'{self.imshow_kwargs[i]["vmax"]:.1E}', 
+                         transform = self.cb_ax[i].transAxes, rotation = 90,
+                         horizontalalignment = 'left', verticalalignment = 'top', size = 'small'))
+      self.cb_bottom_labels.append(self.cb_ax[i].text(1.2, 0, f'{self.imshow_kwargs[i]["vmin"]:.1E}', 
+                         transform = self.cb_ax[i].transAxes, rotation = 90,
+                         horizontalalignment = 'left', verticalalignment = 'bottom', size = 'small'))
+      self.cb_ax[i].set_xticks([])
+      self.cb_ax[i].set_yticks([])
+
+
     # connect the image figure with actions
     self.fig.canvas.mpl_connect('scroll_event',self.onscroll)
     self.fig.canvas.mpl_connect('button_press_event',self.onbuttonpress)
     self.fig.canvas.mpl_connect('key_press_event', self.onkeypress)
-
-    if rowlabels is None:
-      self.fig.subplots_adjust(left=0,right=1,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
-
-    else:
-      for ivol, label in enumerate(rowlabels):
-        self.fig.text(0.01,1 - (ivol + 0.5)/self.n_vols, label, rotation='vertical', 
-                      size = 'large', verticalalignment = 'center')
-      self.fig.subplots_adjust(left=0.03,right=1,bottom=0,top=0.97,wspace=0.01,hspace=0.01)
     self.fig.show()
-
-    # set up figure for colorbar and ...
-    self.fig_cb, self.ax_cb = py.subplots(self.n_vols, 1, figsize = (1,width*fig_asp), squeeze = False)
-    self.fig_cb.subplots_adjust(left=0,right=0.3,bottom=0.02,top=0.96,wspace=0.05,hspace=0.05)
-    self.fig_cb.show()
-
-    cbmax     = 255
-    cbar_size = 20
-    cbarr     = np.outer(np.arange((int(cbar_size*cbmax))),np.ones(cbmax))
-
-    for i in range(self.n_vols): 
-      cb = self.ax_cb[i,0].imshow(cbarr, origin = 'lower', cmap = self.imshow_kwargs[i]['cmap'])
-      self.ax_cb[i,0].get_xaxis().set_ticks([])
-      self.ax_cb[i,0].get_xaxis().set_ticklabels([])
-      self.ax_cb[i,0].get_yaxis().set_ticks([0,cbmax*cbar_size])
-      self.ax_cb[i,0].get_yaxis().set_ticklabels(['%.1e' % self.imshow_kwargs[i]['vmin'],
-                                                '%.1e' % self.imshow_kwargs[i]['vmax']])
-      self.ax_cb[i,0].yaxis.tick_right()
-
 
     # add cross hair
     self.l0x = [] 
@@ -275,16 +295,21 @@ class ThreeAxisViewer:
     self.fig_sl.show()
 
   #------------------------------------------------------------------------
+  def update_colorbars(self):
+    for i in range(self.n_vols): 
+      self.cb_top_labels[i].set_text(f'{self.imshow_kwargs[i]["vmax"]:.1E}')
+      self.cb_bottom_labels[i].set_text(f'{self.imshow_kwargs[i]["vmin"]:.1E}')
+
+  #------------------------------------------------------------------------
   def update_vmin(self,text):
     for i in range(self.n_vols):
       self.imshow_kwargs[i]['vmin'] = float(self.vmin_boxes[i].text)
       self.imgs[i][0].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][1].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][2].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
-      self.ax_cb[i,0].get_yaxis().set_ticklabels(['%.1e' % self.imshow_kwargs[i]['vmin'],
-                                                '%.1e' % self.imshow_kwargs[i]['vmax']])
+
+      self.update_colorbars()
       self.fig.canvas.draw()
-      self.fig_cb.canvas.draw()
 
   #------------------------------------------------------------------------
   def update_vmax(self,text):
@@ -293,10 +318,9 @@ class ThreeAxisViewer:
       self.imgs[i][0].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][1].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
       self.imgs[i][2].set_clim([self.imshow_kwargs[i]['vmin'], self.imshow_kwargs[i]['vmax']])
-      self.ax_cb[i,0].get_yaxis().set_ticklabels(['%.1e' % self.imshow_kwargs[i]['vmin'],
-                                                '%.1e' % self.imshow_kwargs[i]['vmax']])
+
+      self.update_colorbars()
       self.fig.canvas.draw()
-      self.fig_cb.canvas.draw()
 
   #------------------------------------------------------------------------
   def redraw_transversal(self):
