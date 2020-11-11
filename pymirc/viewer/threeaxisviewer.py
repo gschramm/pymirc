@@ -237,7 +237,7 @@ class ThreeAxisViewer:
     self.cb_bottom_labels = []
 
     for i in range(self.n_vols): 
-      self.cb_ax[i].imshow(np.arange(128).reshape((128,1)), aspect = 0.2, 
+      self.cb_ax[i].imshow(np.arange(128).reshape((128,1)), aspect = 0.2, origin = 'lower',
                            cmap = self.imshow_kwargs[i]['cmap']) 
       self.cb_top_labels.append(self.cb_ax[i].text(1.2, 1, f'{self.imshow_kwargs[i]["vmax"]:.1E}', 
                          transform = self.cb_ax[i].transAxes, rotation = 90,
