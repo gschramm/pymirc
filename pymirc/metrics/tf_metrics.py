@@ -37,6 +37,21 @@ def soft_dice_coef(y_true, y_pred):
     dice = (2.0 * intersection + K.epsilon()) / (union + K.epsilon())
     return dice
 
+def soft_dice_coef_3d(y_true, y_pred):
+    '''Returns the soft dice coefficient.
+
+    This is calculated the same way as the normal dice coefficient, but
+    without thresholding. This provides a continuous metric but with the same
+    trend as the actual dice coefficient. This is especially useful as a loss
+    function.
+
+    '''
+    intersection = K.sum(y_true * y_pred, axis=[1, 2, 3])
+    union = K.sum(y_true, axis=[1, 2, 3]) + K.sum(y_pred, axis=[1, 2, 3])
+    dice = (2.0 * intersection + K.epsilon()) / (union + K.epsilon())
+    return dice
+
+
 
 def jaccard_index(y_true, y_pred):
     '''Returns the jaccard index

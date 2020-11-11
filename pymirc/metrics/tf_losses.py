@@ -4,7 +4,7 @@ if tf.__version__.startswith('1.'):
 else:
   from tensorflow.keras import backend as K
 
-from .tf_metrics import soft_dice_coef, soft_jaccard_index, IoU, ssim_3d
+from .tf_metrics import soft_dice_coef, soft_dice_coef_3d, soft_jaccard_index, IoU, ssim_3d
 
 
 def weighted_binary_crossentropy(weights=[.5, 1]):
@@ -28,6 +28,13 @@ def dice(y_true, y_pred):
     Equal to 1 minus the soft dice coefficient defined in metrics
     '''
     return 1 - soft_dice_coef(y_true, y_pred)
+
+
+def dice_3d(y_true, y_pred):
+    '''
+    Equal to 1 minus the soft dice coefficient defined in metrics
+    '''
+    return 1 - soft_dice_coef_3d(y_true, y_pred)
 
 
 def binary_crossentropy(y_true, y_pred):
