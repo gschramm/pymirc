@@ -16,7 +16,7 @@ setuptools.setup(
         "License :: OSI Approved :: LGPL License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.6, <3.9',
     install_requires=['numpy>=1.15',
                       'scipy>=1.1',
                       'matplotlib>=2.2.2',
