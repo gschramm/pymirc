@@ -4,7 +4,7 @@ if tf.__version__.startswith('1.'):
 else:
   from tensorflow.keras import backend as K
 
-from .tf_metrics import soft_dice_coef, soft_dice_coef_3d, soft_jaccard_index, IoU, ssim_3d
+from .tf_metrics import soft_dice_coef, soft_dice_coef_3d, soft_jaccard_index, IoU, ssim_3d, generalized_dice_coeff
 
 
 def weighted_binary_crossentropy(weights=[.5, 1]):
@@ -95,3 +95,31 @@ def ssim_3d_loss(x, y, **kwargs):
   tf_ssim_3d
   """
   return 1 - ssim_3d(x, y, **kwargs)
+
+
+def generalized_dice_loss(**kwargs):
+  """ Generalized dice loss function which is 1 - (generalized dice score)
+
+  Paramters
+  ---------
+
+  y_true : tf tensor
+    containing the label data. dimensions (n_batch, n0, n1, ...., n_feat)
+
+  y_pred : tf tensor
+    containing the predicted data. dimensions (n_batch, n0, n1, ...., n_feat)
+
+  **kwargs : passed to dice_coeff
+
+  Returns
+  -------
+
+  A wrapper function that returns 1 - generalized_dice_coeff(y_true, y_pred, **kwargs)
+  """
+
+  def generalized_dice_loss_wrapper(y_true, y_pred):
+    return 1 - generalized_dice_coeff(y_true, y_pred, **kwargs)
+
+  return  generalized_dice_loss_wrapper
+
+
