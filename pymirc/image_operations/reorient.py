@@ -1,5 +1,6 @@
 import nibabel as nib
 from nibabel.orientations import inv_ornt_aff
+import numpy as np
 
 def reorient_image_and_affine(img, aff):
   """ Reorient an image and and affine such that the affine is approx. diagonal
@@ -64,7 +65,7 @@ def flip_image_and_affine(img, aff, flip_dirs):
 
     # tmp2 is the (i,j,k,1) vector for the last voxel along the flip direction
     tmp3           = tmp2.copy()
-    tmp3[flip_dir] = dim[flip_dir] - 1
+    tmp3[flip_dir] = img.shape[flip_dir] - 1
 
     # this is the affine that does the flipping 
     # the flipping is actual a shift to the center, followed by an inversion
