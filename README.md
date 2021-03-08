@@ -10,12 +10,13 @@ pymirc is a collection of common python imaging routines
 the medical imaging research center of KU Leuven.
 
 ## Requirements
-- python>=3.6
-- numpy>=1.15.0
-- scipy>=1.1.0
-- numba>=0.39.0
-- matplotlib>=2.2.2
-- pydicom>=1.1.0
+see setup.py 
+
+## Installation from pypi
+To install the package from pypi simple run
+```
+pip install pymirc
+```
 
 ## Getting started
 The examples subdirectory contains minimal examples 
