@@ -2,15 +2,15 @@ import setuptools
 
 setuptools.setup(
     name="pymirc",
-    use_scm_version={'fallback_version':'unkown'},
-    setup_requires=['setuptools_scm', 'setuptools_scm_git_archive'],
+    version="0.23.0",
     author="Georg Schramm, Tom Eelbode, Jeroen Bertels",
     author_email="georg.schramm@kuleuven.be",
     description="Python imaging utilities developed in the medical imaging research center of KU Leuven",
+    long_description="Python imaging utilities developed in the medical imaging research center of KU Leuven",
     license='LGPL v3',
     long_description_content_type="text/markdown",
     url="https://github.com/gschramm/pymirc",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude = ["data","examples","tmp","wip"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: LGPL License",
