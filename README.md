@@ -18,9 +18,14 @@ To install the package from pypi simple run
 pip install pymirc
 ```
 
+## (optional) use of modules for tensorflow
+In case you want to use our tensorflow metrics and loss functions
+(tf_losses.py and tf_metrics.py), you also have to tensorflow via
+```
+pip install tensorflow
+```
+
 ## Getting started
 The examples subdirectory contains minimal examples 
 on how to use the most important functions.
-To run those, you don't need to install the package
-(it is added to the PYTHONPATH automatically via sys).
 
