@@ -7,6 +7,8 @@ import datetime
 
 from scipy.ndimage import label, find_objects
 
+from .read_dicom import DicomVolume
+
 # ------------------------------------------------------------------------
 def labelvol_to_rtstruct(roi_vol,
                          aff,
@@ -135,13 +137,28 @@ def labelvol_to_rtstruct(roi_vol,
   if isinstance(refdcm_file, list):
     # in case we got all reference dicom files we add all SOPInstanceUIDs
     # otherwise some RT planning systems refuse to read the RTstructs
-    for fname in refdcm_file:
-      with pydicom.read_file(fname) as tmpdcm:
-        tmp = pydicom.Dataset()
-        tmp.ReferencedSOPClassUID    = tmpdcm.SOPClassUID
-        tmp.ReferencedSOPInstanceUID = tmpdcm.SOPInstanceUID
-        contourImageSeq.append(tmp) 
+
+    # sort the reference dicom files according to slice position
+    dcmVol = DicomVolume(refdcm_file)
+    # we have to read the data to get dicom slices properly sorted
+    # the actual returned image is not needed
+    dummyvol = dcmVol.get_data()
+
+    # calculate the slice offset between the image and ROI volume
+    sl_offset = int(round((np.linalg.inv(dcmVol.affine) @ aff[:,-1])[2]))
+
+    # find the bounding box in the last direction
+    ob_sls  = find_objects(roi_vol > 0)
+    z_start = min([x[2].start for x in ob_sls]) 
+    z_end   = max([x[2].stop  for x in ob_sls]) 
+
+    for i in np.arange(z_start,z_end):
+      tmp = pydicom.Dataset()
+      tmp.ReferencedSOPClassUID    = dcmVol.sorted_SOPClassUIDs[i + sl_offset]
+      tmp.ReferencedSOPInstanceUID = dcmVol.sorted_SOPInstanceUIDs[i + sl_offset]
+      contourImageSeq.append(tmp) 
   else: 
+    dcmVol = None
     tmp = pydicom.Dataset()
     tmp.ReferencedSOPClassUID    = refdcm.SOPClassUID
     tmp.ReferencedSOPInstanceUID = refdcm.SOPInstanceUID
@@ -188,10 +205,6 @@ def labelvol_to_rtstruct(roi_vol,
     #######################################################################
     # write ROIContourSequence containing the actual 2D polygon points of the ROI
     
-    ds_contour = pydicom.Dataset()
-    ds_contour.ReferencedSOPClassUID    = refdcm.SOPClassUID
-    ds_contour.ReferencedSOPInstanceUID = refdcm.SOPInstanceUID
-    
     # generate binary volume for the current ROI 
     bin_vol = (roi_vol == dssr.ROINumber).astype(int)
   
@@ -199,14 +212,23 @@ def labelvol_to_rtstruct(roi_vol,
     ob_sls  = find_objects(bin_vol)
     z_start = min([x[2].start for x in ob_sls]) 
     z_end   = max([x[2].stop  for x in ob_sls]) 
-  
+
     ds_roi_contour = pydicom.Dataset()
     ds_roi_contour.ROIDisplayColor     = roi_colors[iroi % len(roi_colors)]
     ds_roi_contour.ReferencedROINumber = dssr.ROINumber
     ds_roi_contour.ContourSequence     = pydicom.Sequence()
- 
+  
     # loop over the slices in the 2 direction to create 2D polygons 
     for sl in np.arange(z_start, z_end):  
+      ds_contour = pydicom.Dataset()
+
+      if dcmVol is None:
+        ds_contour.ReferencedSOPInstanceUID = refdcm.SOPInstanceUID
+        ds_contour.ReferencedSOPClassUID    = refdcm.SOPClassUID
+      else:
+        ds_contour.ReferencedSOPInstanceUID = dcmVol.sorted_SOPInstanceUIDs[sl + sl_offset]
+        ds_contour.ReferencedSOPClassUID    = dcmVol.sorted_SOPClassUIDs[sl + sl_offset]
+
       bin_slice = bin_vol[:,:,sl]
   
       if bin_slice.max() > 0:

@@ -425,6 +425,10 @@ class DicomVolume:
     dicomlistsorted        = [x for (y,x) in sorted(zip(d,dicomlist))]
     pixelarraylistsorted   = [x.pixel_array for x in dicomlistsorted]
 
+    # store the sorted list of SOPInstanceUIDs which is needed when writing RTstructs
+    self.sorted_SOPClassUIDs    = [x.SOPClassUID for x in dicomlistsorted]
+    self.sorted_SOPInstanceUIDs = [x.SOPInstanceUID for x in dicomlistsorted]
+
     self.Nslices           = len(dicomlistsorted)
     self.Nrows, self.Ncols = pixelarraylistsorted[0].shape
 
