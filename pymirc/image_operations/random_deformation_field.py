@@ -54,4 +54,8 @@ def random_deformation_field(shape, shift = 2., n = 30, npad = 5, gaussian_std =
   d1 *= shift[1]/d1.std()
   d2 *= shift[2]/d2.std()
 
+  d0 = d0[:min(d0.shape[0], shape[0]), :min(d0.shape[1], shape[1]), :min(d0.shape[2], shape[2])]
+  d1 = d1[:min(d1.shape[0], shape[0]), :min(d1.shape[1], shape[1]), :min(d1.shape[2], shape[2])]
+  d2 = d2[:min(d2.shape[0], shape[0]), :min(d2.shape[1], shape[1]), :min(d2.shape[2], shape[2])]
+
   return d0, d1, d2
