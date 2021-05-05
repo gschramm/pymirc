@@ -186,7 +186,8 @@ def generalized_dice_coeff(y_true,
                            reduce_along_batch    = False,
                            reduce_along_features = True,
                            feature_weights       = None,
-                           threshold             = None):
+                           threshold             = None,
+                           keepdims              = False):
   """ Generalized Dice coefficient for a tensor containing a batch of ndim images with multiple features
       Sudre et al. "Generalised Dice overlap as a deep learning loss function for highly
                     unbalanced segmentations" https://arxiv.org/abs/1707.03237
@@ -220,6 +221,9 @@ def generalized_dice_coeff(y_true,
     if None, no thresholding is done and thus the dice coefficient is 'soft' (depending on the input). 
     If a threshold is provided the volumes are thresholded first.
 
+  keepdims : bool, default False
+    One can choose similar to other functions to keep the reduced dims.
+
   Returns
   -------
     a tensor of shape (n_batch) containing the generalized (feature weighted) Dice coefficient
@@ -233,9 +237,9 @@ def generalized_dice_coeff(y_true,
     y_true = tf.cast(tf.math.greater(y_true, threshold), y_true.dtype)
     y_pred = tf.cast(tf.math.greater(y_pred, threshold), y_pred.dtype)
 
-  intersection = tf.math.reduce_sum(y_true * y_pred, axis = ax)
+  intersection = tf.math.reduce_sum(y_true * y_pred, axis = ax, keepdims=keepdims)
 
-  denom = tf.math.reduce_sum(y_true, axis = ax) + tf.math.reduce_sum(y_pred, axis = ax)
+  denom = tf.math.reduce_sum(y_true, axis = ax, keepdims=keepdims) + tf.math.reduce_sum(y_pred, axis = ax, keepdims=keepdims)
 
   # now reduce the dice coeff across the feature dimension
   if reduce_along_features:
@@ -244,12 +248,12 @@ def generalized_dice_coeff(y_true,
       # if no weights are given, we use the same constant weight for all features
       feature_weights = 1
 
-    intersection = tf.math.reduce_sum(intersection*feature_weights, axis = -1)
-    denom        = tf.math.reduce_sum(denom*feature_weights, axis = -1)
+    intersection = tf.math.reduce_sum(intersection*feature_weights, axis = -1, keepdims=keepdims)
+    denom        = tf.math.reduce_sum(denom*feature_weights, axis = -1, keepdims=keepdims)
 
   if reduce_along_batch:
-    intersection = tf.math.reduce_sum(intersection, axis = 0)
-    denom = tf.math.reduce_sum(denom, axis = 0)
+    intersection = tf.math.reduce_sum(intersection, axis = 0, keepdims=keepdims)
+    denom = tf.math.reduce_sum(denom, axis = 0, keepdims=keepdims)
 
   return (2 * intersection + eps) / (denom + eps)
 
