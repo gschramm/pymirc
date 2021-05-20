@@ -35,6 +35,8 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
                       FrameOfReferenceUID                    = None,
                       RadiopharmaceuticalInformationSequence = None,
                       PatientGantryRelationshipCodeSequence  = None, 
+                      sl                                     = None,
+                      frm                                    = None,
                       verbose                                = False,
                       **kwargs):
   """write a 2D PET dicom slice
@@ -45,7 +47,6 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
   pixel_array : 2d numpy array 
     array that contains the image values
 
-
   filename : str, optional  
     name of the output dicom file (default: None -> automatically generated)
   
@@ -54,6 +55,9 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
 
   suffix : string, optional 
     suffix for dicom file (default '.dcm')
+
+  sl, frm : int, optional
+    slice and frame numbers that are appended to the file name prefix if given
 
   SecondaryCaptureDeviceManufctur       --|  
   uid_base                                | 
@@ -124,11 +128,17 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
 
   # the MediaStorageSOPInstanceUID sould be the same as SOPInstanceUID
   # however it is stored in the meta information header to have faster access
-  if SOPInstanceUID == None: SOPInstanceUID = dicom.uid.generate_uid(uid_base)
+  if SOPInstanceUID is None: SOPInstanceUID = dicom.uid.generate_uid(uid_base)
   file_meta.MediaStorageSOPInstanceUID = SOPInstanceUID
   file_meta.ImplementationClassUID     = uid_base + '1.1.1'
  
-  filename = modality + '.' + SOPInstanceUID + suffix
+  prefix = modality
+  # append the frame and slice number to the file name prefix if given
+  # not needed for the dicom standard but can be usefule for less dicom conform "2D" readers
+  if frm is not None: prefix += f'.{frm:03}'
+  if sl is not None: prefix += f'.{sl:05}'
+
+  filename = f'{prefix}.{SOPInstanceUID}{suffix}'
  
   # Create the FileDataset instance (initially no data elements, but file_meta
   # supplied)
@@ -144,13 +154,13 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
   ds.StudyDescription  = StudyDescription
   ds.SeriesDescription = SeriesDescription
 
-  if StudyInstanceUID    == None: StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
+  if StudyInstanceUID    is None: StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
   ds.StudyInstanceUID    = StudyInstanceUID   
 
-  if SeriesInstanceUID   == None: SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
+  if SeriesInstanceUID   is None: SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
   ds.SeriesInstanceUID   = SeriesInstanceUID  
 
-  if FrameOfReferenceUID == None: FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
+  if FrameOfReferenceUID is None: FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
   ds.FrameOfReferenceUID = FrameOfReferenceUID
 
   ds.SOPInstanceUID      = SOPInstanceUID     
@@ -182,10 +192,10 @@ def write_dicom_slice(pixel_array, # 2D array in LP orientation
     ds.PixelRepresentation = 0                
 
     # rescale the input pixel array to uint16 if needed
-    if RescaleIntercept == None: RescaleIntercept = pixel_array.min()
+    if RescaleIntercept is None: RescaleIntercept = pixel_array.min()
     if RescaleIntercept != 0:    pixel_array      = 1.0*pixel_array - RescaleIntercept
       
-    if RescaleSlope == None: 
+    if RescaleSlope is None: 
       if pixel_array.max() != 0: RescaleSlope = 1.0*pixel_array.max()/(2**16 - 1)
       else:                      RescaleSlope = 1.0
     if RescaleSlope != 1: pixel_array  = 1.0*pixel_array/RescaleSlope
@@ -252,6 +262,8 @@ def write_3d_static_dicom(vol_lps,
                           StudyInstanceUID    = None, 
                           SeriesInstanceUID   = None,
                           FrameOfReferenceUID = None,
+                          use_sl_in_fname     = False,
+                          frm                 = None,
                           **kwargs):
   """write a 3d PET volume to 2D dicom files
 
@@ -287,6 +299,12 @@ def write_3d_static_dicom(vol_lps,
   FrameOfReferenceUID : str, optional 
     dicom frame of reference UID (default None -> autom. created)       
 
+  use_sl_in_fname : bool, optional
+    use the slice number in the file names (default False)
+
+  frm : int, optional
+    frm number for file name (default None means it is not used in file name)
+
   **kwargs : dict, optional
     passed to write_dicom_slice
 
@@ -313,21 +331,26 @@ def write_3d_static_dicom(vol_lps,
 
   lps_origin = affine[:-1,-1]
 
-  if RescaleSlope == None: RescaleSlope = (vol_lps.max() - vol_lps.min()) / (2**16 - 1)
-  if RescaleIntercept == None: RescaleIntercept = vol_lps.min()
+  if RescaleSlope is None: RescaleSlope = (vol_lps.max() - vol_lps.min()) / (2**16 - 1)
+  if RescaleIntercept is None: RescaleIntercept = vol_lps.min()
 
   # calculate the normalized direction vector in z direction
   nz = np.cross(nx,ny)
 
-  if StudyInstanceUID    == None: StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
-  if SeriesInstanceUID   == None: SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
-  if FrameOfReferenceUID == None: FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
+  if StudyInstanceUID    is None: StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
+  if SeriesInstanceUID   is None: SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
+  if FrameOfReferenceUID is None: FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
 
   numSlices = vol_lps.shape[2]
 
   fnames = []
 
   for i in range(vol_lps.shape[-1]):
+    if use_sl_in_fname:
+      sl = i
+    else:
+      sl = None
+
     fnames.append(write_dicom_slice(vol_lps[:,:,i], 
                                     uid_base                = uid_base,
                                     ImagePositionPatient    = (lps_origin + i*zvoxsize*nz).astype('str').tolist(),
@@ -341,6 +364,8 @@ def write_3d_static_dicom(vol_lps,
                                     FrameOfReferenceUID     = FrameOfReferenceUID,
                                     outputdir               = outputdir,
                                     NumberOfSlices          = numSlices,
+                                    sl                      = sl,
+                                    frm                     = frm,
                                     **kwargs))
 
   return fnames
@@ -349,8 +374,9 @@ def write_3d_static_dicom(vol_lps,
 
 def write_4d_dicom(vol_lps, 
                    outputdir,
-                   uid_base   = '1.2.826.0.1.3680043.9.7147.',
-                   SeriesType = 'DYNAMIC',
+                   uid_base         = '1.2.826.0.1.3680043.9.7147.',
+                   SeriesType       = 'DYNAMIC',
+                   use_frm_in_fname = False,
                    **kwargs):
 
   """ write 4D volume to 2D dicom files
@@ -367,6 +393,9 @@ def write_4d_dicom(vol_lps,
  
   uid_base : str, optional
     base string for UID (default 1.2.826.0.1.3680043.9.7147)
+
+  use_frm_in_fname : bool, optional
+    use the frame number in the file names (default False)
 
   **kwargs : dict
     passed to write_3d_static_dicom
@@ -402,6 +431,11 @@ def write_4d_dicom(vol_lps,
       if type(value) is list: kw[key] = value[i]
       else:                   kw[key] = value
 
+    if use_frm_in_fname:
+      frm = i
+    else:
+      frm = None
+
     fnames.append(write_3d_static_dicom(vol_lps[i,...], 
                                         outputdir,
                                         uid_base                   = uid_base,
@@ -411,6 +445,7 @@ def write_4d_dicom(vol_lps,
                                         SeriesInstanceUID          = SeriesInstanceUID,  
                                         FrameOfReferenceUID        = FrameOfReferenceUID,
                                         SeriesType                 = SeriesType,
+                                        frm                        = frm,
                                         **kw))
 
   return fnames
