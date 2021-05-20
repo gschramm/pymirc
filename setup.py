@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="pymirc",
-    version="0.23.0",
+    version="0.24.0",
     author="Georg Schramm, Tom Eelbode, Jeroen Bertels",
     author_email="georg.schramm@kuleuven.be",
     description="Python imaging utilities developed in the medical imaging research center of KU Leuven",
