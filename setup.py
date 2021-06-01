@@ -8,7 +8,7 @@ setuptools.setup(
     author_email="georg.schramm@kuleuven.be",
     description="Python imaging utilities developed in the medical imaging research center of KU Leuven",
     long_description="Python imaging utilities developed in the medical imaging research center of KU Leuven",
-    license='LGPL-3.0-only',
+    license='LGPL-3.0-or-later',
     license_files = ('LICENSE',),
     long_description_content_type="text/markdown",
     url="https://github.com/gschramm/pymirc",
