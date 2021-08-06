@@ -146,6 +146,7 @@ class DicomVolume:
     3d numpy array
        reoriented numpy array in LPS orientation
     """
+
     # check the directions of the norm, col and row dir and revert some axis if necessary
     if(self.normdir == -1):
         patvol = patvol[::-1,:,:]
@@ -372,6 +373,13 @@ class DicomVolume:
     self.v0 /= np.sqrt((self.v0**2).sum()) 
     self.v0 *= self.sliceDistance 
 
+    # heuristic modification of v0 and normdir if SpacingBetweenSlices is negative
+    # tested on Siemens SPECT data
+    if 'SpacingBetweenSlices' in dcm_data:
+      if float(dcm_data.SpacingBetweenSlices) < 0:
+        self.v0 *= -1
+        self.normdir *= -1
+
     ipp = None
 
     if 'DetectorInformationSequence' in dcm_data:
@@ -402,6 +410,7 @@ class DicomVolume:
     self.affine[:3,1] = self.v1
     self.affine[:3,2] = self.v2
     self.affine[:3,3] = self.offset
+
 
     return patvol
     
