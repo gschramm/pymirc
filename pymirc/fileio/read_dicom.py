@@ -233,6 +233,11 @@ class DicomVolume:
       if self.dicomlist is None:
         self.dicomlist = [dicom.read_file(x) for x in self.filelist] 
 
+      # check if some images have a SOPclassUID that does not belong to images and drop them
+      # SOPClassUID '1.2.840.10008.5.1.4.1.1.66' means Raw Data Storage
+      #             '1.2.840.10008.5.1.4.1.1.66.x' for x in (1,2,3,4) are also not images
+      self.dicomlist = [x for x in self.dicomlist if not x.SOPClassUID.startswith('1.2.840.10008.5.1.4.1.1.66')]
+
       self.read_all_dcms = True
 
       self.TemporalPositionIdentifiers = []
