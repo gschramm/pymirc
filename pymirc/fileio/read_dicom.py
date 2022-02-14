@@ -613,7 +613,9 @@ class DicomSearch:
 
     # first read all dicom images to get the UIDs
     for fname in self.allfiles:
-      dicomfile = dicom.read_file(fname)
+      dicomfile = dicom.read_file(fname, force = True)
+      if 'SeriesInstanceUID' not in dicomfile:
+        continue
       self.UIDs.append(dicomfile.SeriesInstanceUID)
       dicomfile.clear()
     
