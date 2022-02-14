@@ -417,9 +417,12 @@ def write_4d_dicom(vol_lps,
   """
   numFrames = vol_lps.shape[0]
 
-  StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
   SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
-  FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
+
+  if not 'StudyInstanceUID' in kwargs:
+    kwargs['StudyInstanceUID'] = dicom.uid.generate_uid(uid_base) 
+  if not 'FrameOfReferenceUID' in kwargs:
+    kwargs['FrameOfReferenceUID'] = dicom.uid.generate_uid(uid_base)
 
   numSlices = vol_lps.shape[-1]
 
@@ -441,9 +444,7 @@ def write_4d_dicom(vol_lps,
                                         uid_base                   = uid_base,
                                         TemporalPositionIdentifier = i + 1,
                                         NumberOfTemporalPositions  = numFrames,
-                                        StudyInstanceUID           = StudyInstanceUID,   
                                         SeriesInstanceUID          = SeriesInstanceUID,  
-                                        FrameOfReferenceUID        = FrameOfReferenceUID,
                                         SeriesType                 = SeriesType,
                                         frm                        = frm,
                                         **kw))
