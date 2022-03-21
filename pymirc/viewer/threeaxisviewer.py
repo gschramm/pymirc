@@ -277,6 +277,9 @@ class ThreeAxisViewer:
         self.l2x.append(self.axes[3*i + 2].axvline(self.sl_y, color = 'r',ls = ls))
         self.l2y.append(self.axes[3*i + 2].axhline(self.shape[self.iz] - self.sl_z, color = 'r',ls = ls))
 
+    # list for contour definitions
+    self.contour_configs = []
+
   #------------------------------------------------------------------------
   def update_colorbars(self):
     for i in range(self.n_vols): 
@@ -350,6 +353,17 @@ class ThreeAxisViewer:
     self.redraw_coronal()
     self.redraw_sagittal()
 
+    # draw all contour lines
+    if len(self.contour_configs) > 0:
+      for cfg in self.contour_configs:
+        for i in range(3):
+           # remove drawn contour lines first
+          while(len(self.ax[cfg[1],i].collections) > 0):
+            for col in self.ax[cfg[1],i].collections:
+              col.remove()
+
+          self.ax[cfg[1],i].contour(self.imgs[cfg[0]][i].get_array(), cfg[2], **cfg[3])
+      self.fig.canvas.draw()
   #------------------------------------------------------------------------
   def recalculate_slices(self):
     if self.ndim == 3:
@@ -372,21 +386,21 @@ class ThreeAxisViewer:
       self.fstr         = ', ' + str(self.sl_t)
 
   #------------------------------------------------------------------------
-  def add_contour(self, N = 3, source = 0, target = 1, cmap = py.cm.autumn):
-    for i in range(3):
-      self.ax[target,i].contour(self.imgs[source][i].get_array(), N, cmap = cmap)
-    self.fig.canvas.draw()
+  def add_contour(self, source, target, levels, contour_kwargs):
+    self.contour_configs.append([source, target, levels, contour_kwargs])
+    self.redraw()
 
   #------------------------------------------------------------------------
-  def remove_contour(self, target):
-    for i in range(3):
-      for col in self.ax[target,i].collections:
-        col.remove()
-      # a 2nd loop is needed to remove the last element (not clear why)
-      for col in self.ax[target,i].collections:
-        col.remove()
-
-    self.fig.canvas.draw()
+  def remove_contour(self, k):
+    if k < len(self.contour_configs):
+      cfg = self.contour_configs[k]
+      for i in range(3):
+        # remove drawn contour lines first
+        while(len(self.ax[cfg[1],i].collections) > 0):
+          for col in self.ax[cfg[1],i].collections:
+            col.remove()
+      self.contour_configs.pop(k)
+      self.redraw()
 
   #------------------------------------------------------------------------
   def onkeypress(self,event):
