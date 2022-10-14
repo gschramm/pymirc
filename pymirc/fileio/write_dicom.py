@@ -345,6 +345,12 @@ def write_3d_static_dicom(vol_lps,
 
   fnames = []
 
+  if frm is None:
+    instance_number_offset = 0
+  else: 
+    instance_number_offset = (frm-1) * vol_lps.shape[-1]
+
+
   for i in range(vol_lps.shape[-1]):
     if use_sl_in_fname:
       sl = i
@@ -364,6 +370,7 @@ def write_3d_static_dicom(vol_lps,
                                     FrameOfReferenceUID     = FrameOfReferenceUID,
                                     outputdir               = outputdir,
                                     NumberOfSlices          = numSlices,
+                                    InstanceNumber          = i + 1 + instance_number_offset,
                                     sl                      = sl,
                                     frm                     = frm,
                                     **kwargs))
@@ -376,7 +383,6 @@ def write_4d_dicom(vol_lps,
                    outputdir,
                    uid_base         = '1.2.826.0.1.3680043.9.7147.',
                    SeriesType       = 'DYNAMIC',
-                   use_frm_in_fname = False,
                    **kwargs):
 
   """ write 4D volume to 2D dicom files
@@ -393,9 +399,6 @@ def write_4d_dicom(vol_lps,
  
   uid_base : str, optional
     base string for UID (default 1.2.826.0.1.3680043.9.7147)
-
-  use_frm_in_fname : bool, optional
-    use the frame number in the file names (default False)
 
   **kwargs : dict
     passed to write_3d_static_dicom
@@ -434,11 +437,6 @@ def write_4d_dicom(vol_lps,
       if type(value) is list: kw[key] = value[i]
       else:                   kw[key] = value
 
-    if use_frm_in_fname:
-      frm = i
-    else:
-      frm = None
-
     fnames.append(write_3d_static_dicom(vol_lps[i,...], 
                                         outputdir,
                                         uid_base                   = uid_base,
@@ -446,7 +444,7 @@ def write_4d_dicom(vol_lps,
                                         NumberOfTemporalPositions  = numFrames,
                                         SeriesInstanceUID          = SeriesInstanceUID,  
                                         SeriesType                 = SeriesType,
-                                        frm                        = frm,
+                                        frm                        = i + 1,
                                         **kw))
 
   return fnames
