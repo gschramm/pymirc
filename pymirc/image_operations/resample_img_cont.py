@@ -113,7 +113,7 @@ def resample_img_cont(img, cntcols, cntrows, nroutrows,
     # This way, the inside of a cyclic contour is at the bottom in the
     # resampled image if the contour is given in clockwise direction.
     #----------------------------
-    steps  = -np.arange(nroutrows, dtype = np.float) * stepsize
+    steps  = -np.arange(nroutrows, dtype = float) * stepsize
     steps -= steps.mean()
   
     if outside_above:

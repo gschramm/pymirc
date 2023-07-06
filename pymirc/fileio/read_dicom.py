@@ -89,15 +89,15 @@ class DicomVolume:
             # this is for multi slice data from RayStation
             iop = self.firstdcmheader.ImageOrientationPatient
 
-      self.x = np.array(iop[:3], dtype = np.float) 
-      self.y = np.array(iop[3:], dtype = np.float) 
+      self.x = np.array(iop[:3], dtype = float) 
+      self.y = np.array(iop[3:], dtype = float) 
 
       # set member variable that shows whether data has been read in
       self.read_all_dcms = True
       
     else:
-      self.x = np.array(self.firstdcmheader.ImageOrientationPatient[0:3], dtype = np.float) 
-      self.y = np.array(self.firstdcmheader.ImageOrientationPatient[3:] , dtype = np.float) 
+      self.x = np.array(self.firstdcmheader.ImageOrientationPatient[0:3], dtype = float) 
+      self.y = np.array(self.firstdcmheader.ImageOrientationPatient[3:] , dtype = float) 
 
       # set member variable that shows whether data has been read in
       self.read_all_dcms = False
@@ -106,7 +106,7 @@ class DicomVolume:
 
     # get the row and column pixelspacing 
     if 'PixelSpacing' in self.firstdcmheader:
-      self.pixelspacing = np.array(self.firstdcmheader.PixelSpacing, dtype = np.float) 
+      self.pixelspacing = np.array(self.firstdcmheader.PixelSpacing, dtype = float) 
     else:
       self.pixelspacing = np.array(self.firstdcmheader.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing)
      
@@ -390,16 +390,16 @@ class DicomVolume:
     if 'DetectorInformationSequence' in dcm_data:
       if 'ImagePositionPatient' in dcm_data.DetectorInformationSequence[0]:
         ipp = dcm_data.DetectorInformationSequence[0].ImagePositionPatient
-        self.offset = np.array(ipp, dtype = np.float)
+        self.offset = np.array(ipp, dtype = float)
     elif 'PerFrameFunctionalGroupsSequence' in dcm_data:
       if 'PlanePositionSequence' in dcm_data.PerFrameFunctionalGroupsSequence[0]:
         # this is for molecubes dicom data
         ipp = dcm_data.PerFrameFunctionalGroupsSequence[0].PlanePositionSequence[0].ImagePositionPatient
-        self.offset = np.array(ipp, dtype = np.float)
+        self.offset = np.array(ipp, dtype = float)
     elif 'ImagePositionPatient' in dcm_data:
       # this is for RayStation dicom data
       ipp = dcm_data.ImagePositionPatient
-      self.offset = np.array(ipp, dtype = np.float)
+      self.offset = np.array(ipp, dtype = float)
 
     if ipp is None:
       self.offset = np.zeros(3)
@@ -447,12 +447,12 @@ class DicomVolume:
     self.Nrows, self.Ncols = pixelarraylistsorted[0].shape
 
     if 'RescaleSlope' in dicomlistsorted[0]: 
-        RescaleSlopes  = [np.float(x.RescaleSlope) for x in dicomlistsorted]
+        RescaleSlopes  = [float(x.RescaleSlope) for x in dicomlistsorted]
     else:
         RescaleSlopes = [1.0] * len(dicomlistsorted)
 
     if 'RescaleIntercept' in dicomlistsorted[0]: 
-        RescaleIntercepts = [np.float(x.RescaleIntercept) for x in dicomlistsorted]
+        RescaleIntercepts = [float(x.RescaleIntercept) for x in dicomlistsorted]
     else:
         RescaleIntercepts = [0.0] * len(dicomlistsorted)
     
@@ -461,8 +461,8 @@ class DicomVolume:
         pixelarraylistsorted[i] = pixelarraylistsorted[i]*RescaleSlopes[i] + RescaleIntercepts[i]
 
     # get the first and last ImagePositionPatient vectors
-    self.T1 = np.array(dicomlistsorted[0].ImagePositionPatient , dtype = np.float)
-    self.TN = np.array(dicomlistsorted[-1].ImagePositionPatient, dtype = np.float)
+    self.T1 = np.array(dicomlistsorted[0].ImagePositionPatient , dtype = float)
+    self.TN = np.array(dicomlistsorted[-1].ImagePositionPatient, dtype = float)
     self.dT = self.T1 - self.TN
 
     # get the distance between the dicom slices
@@ -585,7 +585,7 @@ class DicomVolume:
   def distanceMeasure(self,dicomslice):
     # see http://nipy.org/nibabel/dicom/dicom_orientation.html
     # d = position vector in the direction of the normal vector
-    T  = np.array(dicomslice.ImagePositionPatient, dtype = np.float)
+    T  = np.array(dicomslice.ImagePositionPatient, dtype = float)
     d = np.dot(T,self.n)
     return d
 
