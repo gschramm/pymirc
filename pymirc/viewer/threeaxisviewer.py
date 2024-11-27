@@ -431,9 +431,9 @@ class ThreeAxisViewer:
         self.ax[0, 0].set_title(str(self.sl_z) + self.fstr, fontsize="small")
         if self.showCross:
             for l in self.l0x:
-                l.set_xdata(self.sl_x)
+                l.set_xdata((self.sl_x,))
             for l in self.l0y:
-                l.set_ydata(self.sl_y)
+                l.set_ydata((self.sl_y,))
         py.draw()
 
     # ------------------------------------------------------------------------
@@ -450,9 +450,9 @@ class ThreeAxisViewer:
         self.ax[0, 1].set_title(str(self.sl_y) + self.fstr, fontsize="small")
         if self.showCross:
             for l in self.l1x:
-                l.set_xdata(self.sl_x)
+                l.set_xdata((self.sl_x,))
             for l in self.l1y:
-                l.set_ydata(self.shape[self.iz] - self.sl_z - 1)
+                l.set_ydata((self.shape[self.iz] - self.sl_z - 1,))
         py.draw()
 
     # ------------------------------------------------------------------------
@@ -469,9 +469,9 @@ class ThreeAxisViewer:
         self.ax[0, 2].set_title(str(self.sl_x) + self.fstr, fontsize="small")
         if self.showCross:
             for l in self.l2x:
-                l.set_xdata(self.sl_y)
+                l.set_xdata((self.sl_y,))
             for l in self.l2y:
-                l.set_ydata(self.shape[self.iz] - self.sl_z - 1)
+                l.set_ydata((self.shape[self.iz] - self.sl_z - 1,))
         py.draw()
 
     # ------------------------------------------------------------------------
