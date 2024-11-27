@@ -36,4 +36,4 @@ jobs:
       - name: Test the package import
         run: |
           python -m pip install dist/*.whl
-          python -c "import pymirc"
+          python -c "import pymirc; print('pymirc version:', pymirc.__version__)"
