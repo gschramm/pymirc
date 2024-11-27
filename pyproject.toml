@@ -17,7 +17,7 @@ dependencies = [
   "numba>=0.39",
   "nibabel>=3.0",
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 authors = [
   {name = "Georg Schramm"},
   {name = "Tom Eelbode"},
