@@ -22,7 +22,7 @@ setuptools.setup(
     install_requires=['numpy>=1.15',
                       'scipy>=1.1',
                       'matplotlib>=2.2.2',
-                      'pydicom>=1.1',
+                      'pydicom>=1.1,<3',
                       'scikit-image>=0.14',
                       'numba>=0.39',
                       'nibabel>=3.0'],
