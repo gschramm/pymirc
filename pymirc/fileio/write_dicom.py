@@ -7,444 +7,496 @@ import numpy as np
 import pydicom as dicom
 from pydicom.dataset import Dataset, FileDataset
 
-from   time import time
+from time import time
 
-def write_dicom_slice(pixel_array, # 2D array in LP orientation
-                      filename                               = None,
-                      outputdir                              = 'mydcmdir',
-                      suffix                                 = '.dcm',
-                      modality                               = 'PT',
-                      SecondaryCaptureDeviceManufctur        = 'KUL',
-                      uid_base                               = '1.2.826.0.1.3680043.9.7147.', # UID root for Georg Schramm
-                      PatientName                            = 'Test^Patient',
-                      PatientID                              = '08150815',
-                      AccessionNumber                        = '08150815',
-                      StudyDescription                       = 'test study',
-                      SeriesDescription                      = 'test series',
-                      PixelSpacing                           = ['1','1'],
-                      SliceThickness                         = '1',
-                      ImagePositionPatient                   = ['0','0','0'],
-                      ImageOrientationPatient                = ['1','0','0','0','1','0'],
-                      CorrectedImage                         = ['DECY','ATTN','SCAT','DTIM','LIN','CLN'],
-                      ImageType                              = 'STATIC',
-                      RescaleSlope                           = None,
-                      RescaleIntercept                       = None,
-                      StudyInstanceUID                       = None,
-                      SeriesInstanceUID                      = None,
-                      SOPInstanceUID                         = None,
-                      FrameOfReferenceUID                    = None,
-                      RadiopharmaceuticalInformationSequence = None,
-                      PatientGantryRelationshipCodeSequence  = None, 
-                      sl                                     = None,
-                      frm                                    = None,
-                      verbose                                = False,
-                      **kwargs):
-  """write a 2D PET dicom slice
 
-  Parameters
-  ---------
+def write_dicom_slice(
+    pixel_array,  # 2D array in LP orientation
+    filename=None,
+    outputdir="mydcmdir",
+    suffix=".dcm",
+    modality="PT",
+    SecondaryCaptureDeviceManufctur="KUL",
+    uid_base="1.2.826.0.1.3680043.9.7147.",  # UID root for Georg Schramm
+    PatientName="Test^Patient",
+    PatientID="08150815",
+    AccessionNumber="08150815",
+    StudyDescription="test study",
+    SeriesDescription="test series",
+    PixelSpacing=["1", "1"],
+    SliceThickness="1",
+    ImagePositionPatient=["0", "0", "0"],
+    ImageOrientationPatient=["1", "0", "0", "0", "1", "0"],
+    CorrectedImage=["DECY", "ATTN", "SCAT", "DTIM", "LIN", "CLN"],
+    ImageType="STATIC",
+    RescaleSlope=None,
+    RescaleIntercept=None,
+    StudyInstanceUID=None,
+    SeriesInstanceUID=None,
+    SOPInstanceUID=None,
+    FrameOfReferenceUID=None,
+    RadiopharmaceuticalInformationSequence=None,
+    PatientGantryRelationshipCodeSequence=None,
+    sl=None,
+    frm=None,
+    verbose=False,
+    **kwargs,
+):
+    """write a 2D PET dicom slice
 
-  pixel_array : 2d numpy array 
-    array that contains the image values
+    Parameters
+    ---------
 
-  filename : str, optional  
-    name of the output dicom file (default: None -> automatically generated)
-  
-  outputdir : string, optional 
-    output directory fir dicom file (default: mydcmdir)
+    pixel_array : 2d numpy array
+      array that contains the image values
 
-  suffix : string, optional 
-    suffix for dicom file (default '.dcm')
+    filename : str, optional
+      name of the output dicom file (default: None -> automatically generated)
 
-  sl, frm : int, optional
-    slice and frame numbers that are appended to the file name prefix if given
+    outputdir : string, optional
+      output directory fir dicom file (default: mydcmdir)
 
-  SecondaryCaptureDeviceManufctur       --|  
-  uid_base                                | 
-  PatientName                             | 
-  PatientID                               | 
-  AccessionNumber                         | 
-  StudyDescription                        | 
-  SeriesDescription                       | 
-  PixelSpacing                            | 
-  SliceThickness                          | 
-  ImagePositionPatient                    | 
-  ImageOrientationPatient                 | 
-  CorrectedImage                          | ... dicom tags that should be present in a minimal
-  ImageType                               |     dicom header
-  RescaleSlope                            |     see function definition for default values
-  RescaleIntercept                        |     default None means that they are creacted automatically
-  StudyInstanceUID                        | 
-  SeriesInstanceUID                       | 
-  SOPInstanceUID                          | 
-  FrameOfReferenceUID                     | 
-  RadiopharmaceuticalInformationSequence  | 
-  PatientGantryRelationshipCodeSequence --| 
+    suffix : string, optional
+      suffix for dicom file (default '.dcm')
 
-  **kwargs : additional tags from the standard dicom dictionary to write
-             the following tags could be useful:
-  StudyDate                              
-  StudyTime                              
-  SeriesDate                             
-  SeriesTime                             
-  AcquisitionDate                        
-  AcquisitionTime                        
-  PatientBirthDate                       
-  PatientSex                             
-  PatientAge                             
-  PatientSize                            
-  PatientWeight                          
-  ActualFrameDuration                    
-  PatientPosition                        
-  DecayCorrectionDateTime                
-  ImagesInAcquisition                    
-  SliceLocation                          
-  NumberOfSlices                         
-  Units                                  
-  DecayCorrection                        
-  ReconstructionMethod                   
-  FrameReferenceTime                     
-  DecayFactor                             
-  DoseCalibrationFactor                  
-  ImageIndex                             
+    sl, frm : int, optional
+      slice and frame numbers that are appended to the file name prefix if given
 
-  Returns
-  -------
-  str
-    containing the ouput file name  
+    SecondaryCaptureDeviceManufctur       --|
+    uid_base                                |
+    PatientName                             |
+    PatientID                               |
+    AccessionNumber                         |
+    StudyDescription                        |
+    SeriesDescription                       |
+    PixelSpacing                            |
+    SliceThickness                          |
+    ImagePositionPatient                    |
+    ImageOrientationPatient                 |
+    CorrectedImage                          | ... dicom tags that should be present in a minimal
+    ImageType                               |     dicom header
+    RescaleSlope                            |     see function definition for default values
+    RescaleIntercept                        |     default None means that they are creacted automatically
+    StudyInstanceUID                        |
+    SeriesInstanceUID                       |
+    SOPInstanceUID                          |
+    FrameOfReferenceUID                     |
+    RadiopharmaceuticalInformationSequence  |
+    PatientGantryRelationshipCodeSequence --|
 
-  """
-  # create output dir if it does not exist
-  if not os.path.exists(outputdir): os.mkdir(outputdir)
+    **kwargs : additional tags from the standard dicom dictionary to write
+               the following tags could be useful:
+    StudyDate
+    StudyTime
+    SeriesDate
+    SeriesTime
+    AcquisitionDate
+    AcquisitionTime
+    PatientBirthDate
+    PatientSex
+    PatientAge
+    PatientSize
+    PatientWeight
+    ActualFrameDuration
+    PatientPosition
+    DecayCorrectionDateTime
+    ImagesInAcquisition
+    SliceLocation
+    NumberOfSlices
+    Units
+    DecayCorrection
+    ReconstructionMethod
+    FrameReferenceTime
+    DecayFactor
+    DoseCalibrationFactor
+    ImageIndex
 
-  # Populate required values for file meta information
-  file_meta = Dataset()
+    Returns
+    -------
+    str
+      containing the ouput file name
 
-  if   modality == 'PT': file_meta.MediaStorageSOPClassUID    = '1.2.840.10008.5.1.4.1.1.128'
-  elif modality == 'NM': file_meta.MediaStorageSOPClassUID    = '1.2.840.10008.5.1.4.1.1.20'
-  elif modality == 'CT': file_meta.MediaStorageSOPClassUID    = '1.2.840.10008.5.1.4.1.1.2'
-  elif modality == 'MR': file_meta.MediaStorageSOPClassUID    = '1.2.840.10008.5.1.4.1.1.4'
-  else:                  file_meta.MediaStorageSOPClassUID    = '1.2.840.10008.5.1.4.1.1.4'
+    """
+    # create output dir if it does not exist
+    if not os.path.exists(outputdir):
+        os.mkdir(outputdir)
 
-  # the MediaStorageSOPInstanceUID sould be the same as SOPInstanceUID
-  # however it is stored in the meta information header to have faster access
-  if SOPInstanceUID is None: SOPInstanceUID = dicom.uid.generate_uid(uid_base)
-  file_meta.MediaStorageSOPInstanceUID = SOPInstanceUID
-  file_meta.ImplementationClassUID     = uid_base + '1.1.1'
- 
-  prefix = modality
-  # append the frame and slice number to the file name prefix if given
-  # not needed for the dicom standard but can be usefule for less dicom conform "2D" readers
-  if frm is not None: prefix += f'.{frm:03}'
-  if sl is not None: prefix += f'.{sl:05}'
+    # Populate required values for file meta information
+    file_meta = Dataset()
 
-  filename = f'{prefix}.{SOPInstanceUID}{suffix}'
- 
-  # Create the FileDataset instance (initially no data elements, but file_meta
-  # supplied)
-  ds = FileDataset(filename, {}, file_meta=file_meta, preamble=b"\0" * 128)
- 
-  # Add the data elements -- not trying to set all required here. Check DICOM
-  # standard
-  ds.PatientName     = PatientName
-  ds.PatientID       = PatientID
-  ds.AccessionNumber = AccessionNumber
+    if modality == "PT":
+        file_meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.128"
+    elif modality == "NM":
+        file_meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.20"
+    elif modality == "CT":
+        file_meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.2"
+    elif modality == "MR":
+        file_meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.4"
+    else:
+        file_meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.4"
 
-  ds.Modality          = modality
-  ds.StudyDescription  = StudyDescription
-  ds.SeriesDescription = SeriesDescription
+    # the MediaStorageSOPInstanceUID sould be the same as SOPInstanceUID
+    # however it is stored in the meta information header to have faster access
+    if SOPInstanceUID is None:
+        SOPInstanceUID = dicom.uid.generate_uid(uid_base)
+    file_meta.MediaStorageSOPInstanceUID = SOPInstanceUID
+    file_meta.ImplementationClassUID = uid_base + "1.1.1"
 
-  if StudyInstanceUID    is None: StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
-  ds.StudyInstanceUID    = StudyInstanceUID   
+    prefix = modality
+    # append the frame and slice number to the file name prefix if given
+    # not needed for the dicom standard but can be usefule for less dicom conform "2D" readers
+    if frm is not None:
+        prefix += f".{frm:03}"
+    if sl is not None:
+        prefix += f".{sl:05}"
 
-  if SeriesInstanceUID   is None: SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
-  ds.SeriesInstanceUID   = SeriesInstanceUID  
+    filename = f"{prefix}.{SOPInstanceUID}{suffix}"
 
-  if FrameOfReferenceUID is None: FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
-  ds.FrameOfReferenceUID = FrameOfReferenceUID
+    # Create the FileDataset instance (initially no data elements, but file_meta
+    # supplied)
+    ds = FileDataset(filename, {}, file_meta=file_meta, preamble=b"\0" * 128)
 
-  ds.SOPInstanceUID      = SOPInstanceUID     
-  ds.SOPClassUID         = file_meta.MediaStorageSOPClassUID
+    # Add the data elements -- not trying to set all required here. Check DICOM
+    # standard
+    ds.PatientName = PatientName
+    ds.PatientID = PatientID
+    ds.AccessionNumber = AccessionNumber
 
-  ds.SecondaryCaptureDeviceManufctur = SecondaryCaptureDeviceManufctur
+    ds.Modality = modality
+    ds.StudyDescription = StudyDescription
+    ds.SeriesDescription = SeriesDescription
 
-  ## These are the necessary imaging components of the FileDataset object.
-  ds.SamplesPerPixel           = 1
+    if StudyInstanceUID is None:
+        StudyInstanceUID = dicom.uid.generate_uid(uid_base)
+    ds.StudyInstanceUID = StudyInstanceUID
 
-  if modality == 'PT' or modality == 'NM': ds.PhotometricInterpretation = "MONOCHROME1"
-  else:                                    ds.PhotometricInterpretation = "MONOCHROME2"
+    if SeriesInstanceUID is None:
+        SeriesInstanceUID = dicom.uid.generate_uid(uid_base)
+    ds.SeriesInstanceUID = SeriesInstanceUID
 
-  ds.HighBit                   = 15
-  ds.BitsStored                = 16
-  ds.BitsAllocated             = 16
+    if FrameOfReferenceUID is None:
+        FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
+    ds.FrameOfReferenceUID = FrameOfReferenceUID
 
-  # PixelRepresentation is 0 for uint16, 1 for int16
+    ds.SOPInstanceUID = SOPInstanceUID
+    ds.SOPClassUID = file_meta.MediaStorageSOPClassUID
 
-  if pixel_array.dtype == np.uint16:
-    ds.PixelRepresentation = 0                
-    ds.RescaleIntercept    = 0    
-    ds.RescaleSlope        = 1    
-  elif pixel_array.dtype == np.int16:
-    ds.PixelRepresentation = 1                
-    ds.RescaleIntercept    = 0    
-    ds.RescaleSlope        = 1    
-  else:
-    ds.PixelRepresentation = 0                
+    ds.SecondaryCaptureDeviceManufctur = SecondaryCaptureDeviceManufctur
 
-    # rescale the input pixel array to uint16 if needed
-    if RescaleIntercept is None: RescaleIntercept = pixel_array.min()
-    if RescaleIntercept != 0:    pixel_array      = 1.0*pixel_array - RescaleIntercept
-      
-    if RescaleSlope is None: 
-      if pixel_array.max() != 0: RescaleSlope = 1.0*pixel_array.max()/(2**16 - 1)
-      else:                      RescaleSlope = 1.0
-    if RescaleSlope != 1: pixel_array  = 1.0*pixel_array/RescaleSlope
+    ## These are the necessary imaging components of the FileDataset object.
+    ds.SamplesPerPixel = 1
 
-    pixel_array = pixel_array.astype(np.uint16)
+    if modality == "PT" or modality == "NM":
+        ds.PhotometricInterpretation = "MONOCHROME1"
+    else:
+        ds.PhotometricInterpretation = "MONOCHROME2"
 
-    ds.RescaleIntercept = RescaleIntercept    
-    ds.RescaleSlope     = RescaleSlope
+    ds.HighBit = 15
+    ds.BitsStored = 16
+    ds.BitsAllocated = 16
 
-  # we have to transpose the column and row direction in the dicoms
-  ds.PixelData      = pixel_array.transpose().tobytes()
-  ds.Columns        = pixel_array.shape[0]
-  ds.Rows           = pixel_array.shape[1]
- 
-  # the pixel spacing also has to be inverted (transposed array saved!) 
-  ds.PixelSpacing   = PixelSpacing[::-1]
-  ds.SliceThickness = SliceThickness
+    # PixelRepresentation is 0 for uint16, 1 for int16
 
-  # Set the transfer syntax
-  ds.is_little_endian = True
-  ds.is_implicit_VR   = True
-  
-  # Set creation date/time
-  dt             = datetime.datetime.now()
-  timeStr        = dt.strftime('%H%M%S.%f')  # long format with micro seconds
-  ds.ContentDate = dt.strftime('%Y%m%d')
-  ds.ContentTime = timeStr
+    if pixel_array.dtype == np.uint16:
+        ds.PixelRepresentation = 0
+        ds.RescaleIntercept = 0
+        ds.RescaleSlope = 1
+    elif pixel_array.dtype == np.int16:
+        ds.PixelRepresentation = 1
+        ds.RescaleIntercept = 0
+        ds.RescaleSlope = 1
+    else:
+        ds.PixelRepresentation = 0
 
-  # voxel coordinate tags 
-  ds.ImagePositionPatient    = ImagePositionPatient   
-  ds.ImageOrientationPatient = ImageOrientationPatient
+        # rescale the input pixel array to uint16 if needed
+        if RescaleIntercept is None:
+            RescaleIntercept = pixel_array.min()
+        if RescaleIntercept != 0:
+            pixel_array = 1.0 * pixel_array - RescaleIntercept
 
-  # special NM tags
-  if modality == 'PT' or modality == 'NM':
-    ds.CorrectedImage = CorrectedImage  
-    ds.ImageType      = ImageType       
+        if RescaleSlope is None:
+            if pixel_array.max() != 0:
+                RescaleSlope = 1.0 * pixel_array.max() / (2**16 - 1)
+            else:
+                RescaleSlope = 1.0
+        if RescaleSlope != 1:
+            pixel_array = 1.0 * pixel_array / RescaleSlope
 
-    if RadiopharmaceuticalInformationSequence != None: 
-      rpi = RadiopharmaceuticalInformationSequence
-      # this is needed otherwise the dicoms cannot be read
-      rpi.is_undefined_length = True
-      rpi[0].RadionuclideCodeSequence.is_undefined_length = True
-      
-      ds.RadiopharmaceuticalInformationSequence = rpi
+        pixel_array = pixel_array.astype(np.uint16)
 
-  # add all key word arguments to dicom structure
-  for key, value in kwargs.items(): 
-    if dicom.datadict.tag_for_keyword(key) != None: setattr(ds,key,value)
-    else: warnings.warn(key + ' not in standard dicom dictionary -> will not be written')
+        ds.RescaleIntercept = RescaleIntercept
+        ds.RescaleSlope = RescaleSlope
 
-  if verbose: print("Writing file", os.path.join(outputdir,filename))
-  dicom.filewriter.write_file(os.path.join(outputdir,filename), ds, write_like_original = False)
+    # we have to transpose the column and row direction in the dicoms
+    ds.PixelData = pixel_array.transpose().tobytes()
+    ds.Columns = pixel_array.shape[0]
+    ds.Rows = pixel_array.shape[1]
 
-  return os.path.join(outputdir,filename)
+    # the pixel spacing also has to be inverted (transposed array saved!)
+    ds.PixelSpacing = PixelSpacing[::-1]
+    ds.SliceThickness = SliceThickness
+
+    # Set the transfer syntax
+    ds.is_little_endian = True
+    ds.is_implicit_VR = True
+
+    # Set creation date/time
+    dt = datetime.datetime.now()
+    timeStr = dt.strftime("%H%M%S.%f")  # long format with micro seconds
+    ds.ContentDate = dt.strftime("%Y%m%d")
+    ds.ContentTime = timeStr
+
+    # voxel coordinate tags
+    ds.ImagePositionPatient = ImagePositionPatient
+    ds.ImageOrientationPatient = ImageOrientationPatient
+
+    # special NM tags
+    if modality == "PT" or modality == "NM":
+        ds.CorrectedImage = CorrectedImage
+        ds.ImageType = ImageType
+
+        if RadiopharmaceuticalInformationSequence != None:
+            rpi = RadiopharmaceuticalInformationSequence
+            # this is needed otherwise the dicoms cannot be read
+            rpi.is_undefined_length = True
+            rpi[0].RadionuclideCodeSequence.is_undefined_length = True
+
+            ds.RadiopharmaceuticalInformationSequence = rpi
+
+    # add all key word arguments to dicom structure
+    for key, value in kwargs.items():
+        if dicom.datadict.tag_for_keyword(key) != None:
+            setattr(ds, key, value)
+        else:
+            warnings.warn(
+                key + " not in standard dicom dictionary -> will not be written"
+            )
+
+    if verbose:
+        print("Writing file", os.path.join(outputdir, filename))
+    dicom.filewriter.write_file(
+        os.path.join(outputdir, filename), ds, write_like_original=False
+    )
+
+    return os.path.join(outputdir, filename)
+
 
 ###########################################################################################
 
-def write_3d_static_dicom(vol_lps, 
-                          outputdir,
-                          affine              = np.eye(4),
-                          uid_base            = '1.2.826.0.1.3680043.9.7147.',
-                          RescaleSlope        = None,
-                          RescaleIntercept    = None,
-                          StudyInstanceUID    = None, 
-                          SeriesInstanceUID   = None,
-                          FrameOfReferenceUID = None,
-                          use_sl_in_fname     = False,
-                          frm                 = None,
-                          **kwargs):
-  """write a 3d PET volume to 2D dicom files
 
-  Parameters
-  ----------
+def write_3d_static_dicom(
+    vol_lps,
+    outputdir,
+    affine=np.eye(4),
+    uid_base="1.2.826.0.1.3680043.9.7147.",
+    RescaleSlope=None,
+    RescaleIntercept=None,
+    StudyInstanceUID=None,
+    SeriesInstanceUID=None,
+    FrameOfReferenceUID=None,
+    use_sl_in_fname=False,
+    frm=None,
+    **kwargs,
+):
+    """write a 3d PET volume to 2D dicom files
 
-  vol_lps : 3d numpy array   
-    a 3D array in LPS orientation containing the image
+    Parameters
+    ----------
 
-  outputdir : str, optional
-    the output directory for the dicom files
+    vol_lps : 3d numpy array
+      a 3D array in LPS orientation containing the image
 
-  affine : 2d 4x4 numpy array, optional
-    affine transformation mapping from voxel to LPS coordinates
-    The voxel sizes, the direction vectors and the LPS origin
-    are derived from it.
+    outputdir : str, optional
+      the output directory for the dicom files
 
-  uid_base : str, optional 
-    base string for UID (default 1.2.826.0.1.3680043.9.7147)
+    affine : 2d 4x4 numpy array, optional
+      affine transformation mapping from voxel to LPS coordinates
+      The voxel sizes, the direction vectors and the LPS origin
+      are derived from it.
 
-  RescaleSlope : float, optional
-    rescale Slope (default None -> maximum of image / (2**16 - 1)) 
+    uid_base : str, optional
+      base string for UID (default 1.2.826.0.1.3680043.9.7147)
 
-  RescaleIntercept : float, optional
-    resalce Intercept (default None -> 0) 
+    RescaleSlope : float, optional
+      rescale Slope (default None -> maximum of image / (2**16 - 1))
 
-  StudyInstanceUID : str, optional
-    dicom study instance UID (default None -> autom. created)
+    RescaleIntercept : float, optional
+      resalce Intercept (default None -> 0)
 
-  SeriesInstanceUID : str, optional 
-    dicom series instance UID (default None -> autom. created)   
+    StudyInstanceUID : str, optional
+      dicom study instance UID (default None -> autom. created)
 
-  FrameOfReferenceUID : str, optional 
-    dicom frame of reference UID (default None -> autom. created)       
+    SeriesInstanceUID : str, optional
+      dicom series instance UID (default None -> autom. created)
 
-  use_sl_in_fname : bool, optional
-    use the slice number in the file names (default False)
+    FrameOfReferenceUID : str, optional
+      dicom frame of reference UID (default None -> autom. created)
 
-  frm : int, optional
-    frm number for file name (default None means it is not used in file name)
+    use_sl_in_fname : bool, optional
+      use the slice number in the file names (default False)
 
-  **kwargs : dict, optional
-    passed to write_dicom_slice
+    frm : int, optional
+      frm number for file name (default None means it is not used in file name)
 
-  Returns
-  -------
-  list
-    containing the file names of the written 2D dicom files
+    **kwargs : dict, optional
+      passed to write_dicom_slice
 
-  Note
-  ----
-  This function is a wrapper around write_dicom_slice.
-  """
-  # get the voxel sizes, direction vectors and the origin from the affine in case given
-  ux = affine[:-1,0]
-  uy = affine[:-1,1]
-  uz = affine[:-1,2]
+    Returns
+    -------
+    list
+      containing the file names of the written 2D dicom files
 
-  xvoxsize = np.sqrt((ux**2).sum()) 
-  yvoxsize = np.sqrt((uy**2).sum()) 
-  zvoxsize = np.sqrt((uz**2).sum()) 
-  
-  nx = ux / xvoxsize        
-  ny = uy / yvoxsize        
+    Note
+    ----
+    This function is a wrapper around write_dicom_slice.
+    """
+    # get the voxel sizes, direction vectors and the origin from the affine in case given
+    ux = affine[:-1, 0]
+    uy = affine[:-1, 1]
+    uz = affine[:-1, 2]
 
-  lps_origin = affine[:-1,-1]
+    xvoxsize = np.sqrt((ux**2).sum())
+    yvoxsize = np.sqrt((uy**2).sum())
+    zvoxsize = np.sqrt((uz**2).sum())
 
-  if RescaleSlope is None: RescaleSlope = (vol_lps.max() - vol_lps.min()) / (2**16 - 1)
-  if RescaleIntercept is None: RescaleIntercept = vol_lps.min()
+    nx = ux / xvoxsize
+    ny = uy / yvoxsize
 
-  # calculate the normalized direction vector in z direction
-  nz = np.cross(nx,ny)
+    lps_origin = affine[:-1, -1]
 
-  if StudyInstanceUID    is None: StudyInstanceUID    = dicom.uid.generate_uid(uid_base) 
-  if SeriesInstanceUID   is None: SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
-  if FrameOfReferenceUID is None: FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
+    if RescaleSlope is None:
+        RescaleSlope = (vol_lps.max() - vol_lps.min()) / (2**16 - 1)
+    if RescaleIntercept is None:
+        RescaleIntercept = vol_lps.min()
 
-  numSlices = vol_lps.shape[2]
+    # calculate the normalized direction vector in z direction
+    nz = np.cross(nx, ny)
 
-  fnames = []
+    if StudyInstanceUID is None:
+        StudyInstanceUID = dicom.uid.generate_uid(uid_base)
+    if SeriesInstanceUID is None:
+        SeriesInstanceUID = dicom.uid.generate_uid(uid_base)
+    if FrameOfReferenceUID is None:
+        FrameOfReferenceUID = dicom.uid.generate_uid(uid_base)
 
-  if frm is None:
-    instance_number_offset = 0
-  else: 
-    instance_number_offset = (frm-1) * vol_lps.shape[-1]
+    numSlices = vol_lps.shape[2]
 
+    fnames = []
 
-  for i in range(vol_lps.shape[-1]):
-    if use_sl_in_fname:
-      sl = i
+    if frm is None:
+        instance_number_offset = 0
     else:
-      sl = None
+        instance_number_offset = (frm - 1) * vol_lps.shape[-1]
 
-    fnames.append(write_dicom_slice(vol_lps[:,:,i], 
-                                    uid_base                = uid_base,
-                                    ImagePositionPatient    = (lps_origin + i*zvoxsize*nz).astype('str').tolist(),
-                                    ImageOrientationPatient = np.concatenate((nx,ny)).astype('str').tolist(),
-                                    PixelSpacing            = [str(xvoxsize), str(yvoxsize)],
-                                    SliceThickness          = str(zvoxsize),
-                                    RescaleSlope            = RescaleSlope,
-                                    RescaleIntercept        = RescaleIntercept,
-                                    StudyInstanceUID        = StudyInstanceUID, 
-                                    SeriesInstanceUID       = SeriesInstanceUID, 
-                                    FrameOfReferenceUID     = FrameOfReferenceUID,
-                                    outputdir               = outputdir,
-                                    NumberOfSlices          = numSlices,
-                                    InstanceNumber          = i + 1 + instance_number_offset,
-                                    sl                      = sl,
-                                    frm                     = frm,
-                                    **kwargs))
+    for i in range(vol_lps.shape[-1]):
+        if use_sl_in_fname:
+            sl = i
+        else:
+            sl = None
 
-  return fnames
+        fnames.append(
+            write_dicom_slice(
+                vol_lps[:, :, i],
+                uid_base=uid_base,
+                ImagePositionPatient=(lps_origin + i * zvoxsize * nz)
+                .astype("str")
+                .tolist(),
+                ImageOrientationPatient=np.concatenate((nx, ny)).astype("str").tolist(),
+                PixelSpacing=[str(xvoxsize), str(yvoxsize)],
+                SliceThickness=str(zvoxsize),
+                RescaleSlope=RescaleSlope,
+                RescaleIntercept=RescaleIntercept,
+                StudyInstanceUID=StudyInstanceUID,
+                SeriesInstanceUID=SeriesInstanceUID,
+                FrameOfReferenceUID=FrameOfReferenceUID,
+                outputdir=outputdir,
+                NumberOfSlices=numSlices,
+                InstanceNumber=i + 1 + instance_number_offset,
+                sl=sl,
+                frm=frm,
+                **kwargs,
+            )
+        )
+
+    return fnames
+
 
 ###################################################################################################
 
-def write_4d_dicom(vol_lps, 
-                   outputdir,
-                   uid_base         = '1.2.826.0.1.3680043.9.7147.',
-                   SeriesType       = 'DYNAMIC',
-                   **kwargs):
 
-  """ write 4D volume to 2D dicom files
+def write_4d_dicom(
+    vol_lps,
+    outputdir,
+    uid_base="1.2.826.0.1.3680043.9.7147.",
+    SeriesType="DYNAMIC",
+    **kwargs,
+):
+    """write 4D volume to 2D dicom files
 
-  Parameters
-  ----------
+    Parameters
+    ----------
 
-  vol_lps : 4d numpy array
-    a 4D array in LPST orientation containing the image.
-    the timing axis has to be the left most axis.
+    vol_lps : 4d numpy array
+      a 4D array in LPST orientation containing the image.
+      the timing axis has to be the left most axis.
 
-  outputdir : str 
-    the output directory for the dicom files
- 
-  uid_base : str, optional
-    base string for UID (default 1.2.826.0.1.3680043.9.7147)
+    outputdir : str
+      the output directory for the dicom files
 
-  **kwargs : dict
-    passed to write_3d_static_dicom
-    note: Every kwarg can be a list of length nframes or a single value.
-          In the first case, each time frame gets a different value
-          (e.g. useful for AcquisitionTime or ActualFrameDuration).
-          In the second case, each time frame gets the same values
-          (e.g. for PatientWeight or affine)        
+    uid_base : str, optional
+      base string for UID (default 1.2.826.0.1.3680043.9.7147)
 
-  Returns
-  -------
-  list of lists
-    containing the filenames of the written 2D dicom files
-    each element containg the filenames of one frame
+    **kwargs : dict
+      passed to write_3d_static_dicom
+      note: Every kwarg can be a list of length nframes or a single value.
+            In the first case, each time frame gets a different value
+            (e.g. useful for AcquisitionTime or ActualFrameDuration).
+            In the second case, each time frame gets the same values
+            (e.g. for PatientWeight or affine)
 
-  Note
-  ----
-  This function is a wrapper around write_3d_static_dicom.
-  """
-  numFrames = vol_lps.shape[0]
+    Returns
+    -------
+    list of lists
+      containing the filenames of the written 2D dicom files
+      each element containg the filenames of one frame
 
-  SeriesInstanceUID   = dicom.uid.generate_uid(uid_base)
+    Note
+    ----
+    This function is a wrapper around write_3d_static_dicom.
+    """
+    numFrames = vol_lps.shape[0]
 
-  if not 'StudyInstanceUID' in kwargs:
-    kwargs['StudyInstanceUID'] = dicom.uid.generate_uid(uid_base) 
-  if not 'FrameOfReferenceUID' in kwargs:
-    kwargs['FrameOfReferenceUID'] = dicom.uid.generate_uid(uid_base)
+    SeriesInstanceUID = dicom.uid.generate_uid(uid_base)
 
-  numSlices = vol_lps.shape[-1]
+    if not "StudyInstanceUID" in kwargs:
+        kwargs["StudyInstanceUID"] = dicom.uid.generate_uid(uid_base)
+    if not "FrameOfReferenceUID" in kwargs:
+        kwargs["FrameOfReferenceUID"] = dicom.uid.generate_uid(uid_base)
 
-  fnames = []
+    numSlices = vol_lps.shape[-1]
 
-  for i in range(numFrames):
-    kw = {}
-    for key, value in kwargs.items():
-      if type(value) is list: kw[key] = value[i]
-      else:                   kw[key] = value
+    fnames = []
 
-    fnames.append(write_3d_static_dicom(vol_lps[i,...], 
-                                        outputdir,
-                                        uid_base                   = uid_base,
-                                        TemporalPositionIdentifier = i + 1,
-                                        NumberOfTemporalPositions  = numFrames,
-                                        SeriesInstanceUID          = SeriesInstanceUID,  
-                                        SeriesType                 = SeriesType,
-                                        frm                        = i + 1,
-                                        **kw))
+    for i in range(numFrames):
+        kw = {}
+        for key, value in kwargs.items():
+            if type(value) is list:
+                kw[key] = value[i]
+            else:
+                kw[key] = value
 
-  return fnames
+        fnames.append(
+            write_3d_static_dicom(
+                vol_lps[i, ...],
+                outputdir,
+                uid_base=uid_base,
+                TemporalPositionIdentifier=i + 1,
+                NumberOfTemporalPositions=numFrames,
+                SeriesInstanceUID=SeriesInstanceUID,
+                SeriesType=SeriesType,
+                frm=i + 1,
+                **kw,
+            )
+        )
+
+    return fnames
