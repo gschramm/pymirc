@@ -14,6 +14,8 @@ jobs:
       # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history to ensure tags are available
 
       # Set up Python
       - name: Set up Python
