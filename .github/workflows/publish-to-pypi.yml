@@ -21,6 +21,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history to ensure tags are available
       - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
