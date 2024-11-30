@@ -2,13 +2,6 @@
 requires = ["setuptools >= 61.0", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = { find = { include = ["pymirc*"], exclude = ["tutorial*"] } }
-
-[tool.setuptools_scm]
-version_scheme = "post-release"
-local_scheme = "dirty-tag"
-
 [project]
 name = "pymirc"
 dynamic = ["version"]
@@ -41,3 +34,12 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/gschramm/pymirc"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pymirc*"]
+exclude = ["pymirc.__pycache__"]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "dirty-tag"

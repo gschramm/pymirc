@@ -1,0 +1,15 @@
+# Include necessary metadata files
+include LICENSE
+include README.md
+include pyproject.toml
+
+# Include only the package files
+graft pymirc
+
+# Exclude unwanted directories
+prune */__pycache__ 
+prune examples
+prune tutorial
+prune tf
+prune .git
+prune .github
