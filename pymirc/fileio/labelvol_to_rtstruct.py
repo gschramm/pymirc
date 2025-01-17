@@ -285,6 +285,6 @@ def labelvol_to_rtstruct(
     #######################################################################
     #######################################################################
 
-    pydicom.filewriter.write_file(
+    pydicom.filewriter.dcmwrite(
         os.path.join(".", filename), ds, write_like_original=False
     )

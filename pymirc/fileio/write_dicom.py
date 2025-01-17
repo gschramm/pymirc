@@ -7,8 +7,6 @@ import numpy as np
 import pydicom as dicom
 from pydicom.dataset import Dataset, FileDataset
 
-from time import time
-
 
 def write_dicom_slice(
     pixel_array,  # 2D array in LP orientation
@@ -16,7 +14,7 @@ def write_dicom_slice(
     outputdir="mydcmdir",
     suffix=".dcm",
     modality="PT",
-    SecondaryCaptureDeviceManufctur="KUL",
+    SecondaryCaptureDeviceManufacturer="KUL",
     uid_base="1.2.826.0.1.3680043.9.7147.",  # UID root for Georg Schramm
     PatientName="Test^Patient",
     PatientID="08150815",
@@ -62,7 +60,7 @@ def write_dicom_slice(
     sl, frm : int, optional
       slice and frame numbers that are appended to the file name prefix if given
 
-    SecondaryCaptureDeviceManufctur       --|
+    SecondaryCaptureDeviceManufacturer    --|
     uid_base                                |
     PatientName                             |
     PatientID                               |
@@ -76,7 +74,7 @@ def write_dicom_slice(
     CorrectedImage                          | ... dicom tags that should be present in a minimal
     ImageType                               |     dicom header
     RescaleSlope                            |     see function definition for default values
-    RescaleIntercept                        |     default None means that they are creacted automatically
+    RescaleIntercept                        |     default None means that they are created automatically
     StudyInstanceUID                        |
     SeriesInstanceUID                       |
     SOPInstanceUID                          |
@@ -181,7 +179,7 @@ def write_dicom_slice(
     ds.SOPInstanceUID = SOPInstanceUID
     ds.SOPClassUID = file_meta.MediaStorageSOPClassUID
 
-    ds.SecondaryCaptureDeviceManufctur = SecondaryCaptureDeviceManufctur
+    ds.SecondaryCaptureDeviceManufacturer = SecondaryCaptureDeviceManufacturer
 
     ## These are the necessary imaging components of the FileDataset object.
     ds.SamplesPerPixel = 1
@@ -274,9 +272,7 @@ def write_dicom_slice(
 
     if verbose:
         print("Writing file", os.path.join(outputdir, filename))
-    dicom.filewriter.write_file(
-        os.path.join(outputdir, filename), ds, write_like_original=False
-    )
+    dicom.dcmwrite(os.path.join(outputdir, filename), ds, write_like_original=False)
 
     return os.path.join(outputdir, filename)
 
